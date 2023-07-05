@@ -1,4 +1,4 @@
-// Copyright 2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2023 Lawrence Livermore National Security, LLC and other
 // libjustify Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: MIT
