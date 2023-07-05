@@ -302,6 +302,8 @@ _free_graph( struct atom *a ){
         _free_graph( a->down );
     }
 
+    // If we're at the point where we're looking at the atom in the top left
+    // corner, we're done.
     if (a == origin){
         origin = NULL;
     }
@@ -325,6 +327,7 @@ _free_graph( struct atom *a ){
     free( a->conversion_specifier );
     free( a->ordinary_text );
     free( a );
+
     return;
 }
 
@@ -340,7 +343,6 @@ struct atom *
 create_atom( bool is_newline ){
     const size_t extend_by = 1;
     static struct atom *last_atom_on_last_line = NULL;
-    //static struct atom *first_atom_on_last_line = NULL;
 
     struct atom *a = calloc( sizeof( struct atom ), 1 );
     assert(a);
@@ -402,7 +404,6 @@ create_atom( bool is_newline ){
 
 // Conversion specifications look like this:
 // %[flags][field_width][.precision][length_modifier]specifier
-
 ptrdiff_t
 parse_flags( const char *p ){
     // Returns the number of bytes starting from the beginning
@@ -501,7 +502,7 @@ calc_actual_width( struct atom *a ){
     L           f/F/e/E/a/A/g/G long double
     (none)      p               void*
 */
-    if(a->is_dummy) return;
+    if(a->is_dummy) return; //Return early if this is a dummy atom. TODO: This isn't great fix it.
 
     static char buf[4097]; 
 
