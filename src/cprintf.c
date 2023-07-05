@@ -1,4 +1,4 @@
-// Copyright 2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2023 Lawrence Livermore National Security, LLC and other
 // libjustify Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: MIT
@@ -12,9 +12,10 @@
 #include <string.h>     // strspan
 #include <stdarg.h>     // variadic
 #include <wchar.h>      // wint_t
-#include <uchar.h>
 #include <stdint.h>     // intmax_t
+#include <uchar.h>
 #include "cprintf.h"
+
 
 // These are the types that printf and friends are aware of.
 // Recall that types shorter than int (e.g., char and short)
@@ -78,6 +79,7 @@ struct atom{
     char *conversion_specifier;
 
     char *ordinary_text;
+    bool is_dummy;
 
     va_list *pargs;
     type_t type;
@@ -90,9 +92,19 @@ struct atom{
     struct atom *down;
 };
 
+
+// Dummy rows represents the last top and bottom rows of the graph.
+struct dummy_rows_ds {
+    struct atom *upper;
+    struct atom *lower;
+    struct atom *bot_root; // Stores the root of the bottom row. This is used for insertion.
+    struct atom *top_root; // Allows free_graph() to be a bit dumber. TODO: THIS IS ONLY USED FOR FREE_GRAPH().  REMOVE IT.
+};
+
 void dump_graph( void );
 void _free_graph( struct atom *a );
 void free_graph();
+
 struct atom * create_atom( bool is_newline );
 ptrdiff_t parse_flags( const char *p );
 ptrdiff_t parse_field_width( const char *p );
@@ -102,13 +114,84 @@ ptrdiff_t parse_conversion_specifier( const char *p );
 void archive( const char *p, ptrdiff_t span, char **q );
 bool is( char *p, const char *q );
 void _cprintf( FILE *stream, const char *fmt, va_list *args );
+void exit_nice(void);
+
+
+// Alot of this is enumerated just for readability.
+struct atom * _make_dummy( void);
+void _extend_dummy_rows(size_t size);
+void _reconnect_rows(void);
 
 static struct atom *origin = NULL;
+static struct dummy_rows_ds *dummy_rows = NULL;
 static FILE *dest = NULL;
+
+
+struct atom *
+_make_dummy( void ) {
+    struct atom *a = calloc( sizeof( struct atom ), 1 );
+    assert(a);
+
+    a->original_specification       = NULL;
+    a->new_specification            = NULL;
+
+    a->flags                        = NULL;
+    a->field_width                  = NULL;
+    a->precision                    = NULL;
+    a->length_modifier              = NULL;
+    a->conversion_specifier         = NULL;
+
+    a->ordinary_text                = NULL;
+    a->pargs                        = NULL;
+
+    a->right                        = NULL;
+    a->left                         = NULL;
+    a->up                           = NULL;
+    a->down                         = NULL;
+
+    a->is_dummy                     = true;
+
+    a->is_conversion_specification  = false;
+    return a;
+};
+
+
+void
+_extend_dummy_rows(size_t size) {
+    struct atom * new_top;
+    struct atom * new_bottom;
+
+    for (; size != 0; --size){
+        new_top = _make_dummy();
+        new_bottom = _make_dummy();
+
+        new_top->down = new_bottom;
+        new_bottom->up = new_top;
+
+        if (NULL == dummy_rows){
+            dummy_rows = calloc(1, sizeof(struct dummy_rows_ds));
+            if (NULL == dummy_rows) {
+                fprintf(stderr, "Memory allocation failed.\n");
+                exit(EXIT_FAILURE);
+            }
+            dummy_rows->bot_root = new_bottom;
+            dummy_rows->top_root = new_top;
+        } else {
+            new_top->left = dummy_rows->upper;
+            new_bottom->left = dummy_rows->lower;
+            dummy_rows->upper->right = new_top;
+            dummy_rows->lower->right = new_bottom;
+        }
+
+        assert(dummy_rows != NULL);
+        dummy_rows->upper = new_top;
+        dummy_rows->lower = new_bottom;
+    }
+};
 
 void
 dump_graph( void ){
-    struct atom *a = origin, *c;
+    struct atom *a = origin->up, *c;
     while( NULL != a ){
         // Address of this atom.
         c = a;
@@ -182,6 +265,13 @@ dump_graph( void ){
         }
         printf("\n");
 
+        c = a;
+        while( NULL != c ){
+            printf("dummy =%-17d", c->is_dummy );
+            c = c->right;
+        }
+        printf("\n");
+
 
         printf("\n");
         a = a->down;
@@ -189,16 +279,17 @@ dump_graph( void ){
     fflush(NULL);
 }
 
+//TODO CLEAN THIS UP. USING DUMMY_ROWS->UPPER AS THE ROOT OF THE UPPER IS VERY HACKY.
 void
 _free_graph( struct atom *a ){
     // Check to see if any graph exists.
-    if( NULL == origin ){
+    if( NULL == dummy_rows->top_root){
         return;
     }
 
     // Starts the process.
     if( NULL == a ){
-        a = origin;
+        a = dummy_rows->top_root;
     }
 
     // Find the rightmost atom in the top line.
@@ -211,9 +302,7 @@ _free_graph( struct atom *a ){
         _free_graph( a->down );
     }
 
-    // If we're at the point where we're looking at the atom in the top left
-    // corner, we're done.
-    if( a == origin ){
+    if (a == origin){
         origin = NULL;
     }
 
@@ -226,6 +315,7 @@ _free_graph( struct atom *a ){
     if( a->left ){
         a->left->right = NULL;
     }
+
     free( a->original_specification );
     free( a->new_specification );
     free( a->flags );
@@ -235,19 +325,22 @@ _free_graph( struct atom *a ){
     free( a->conversion_specifier );
     free( a->ordinary_text );
     free( a );
-
     return;
 }
 
 void
 free_graph(){
-    _free_graph( NULL );
+    _free_graph( origin->up ); //Go to the dummy row. This is kinda convoluted
+    free( dummy_rows );
+    dummy_rows = NULL;
 }
+
 
 struct atom *
 create_atom( bool is_newline ){
+    const size_t extend_by = 1;
     static struct atom *last_atom_on_last_line = NULL;
-    static struct atom *first_atom_on_last_line = NULL;
+    //static struct atom *first_atom_on_last_line = NULL;
 
     struct atom *a = calloc( sizeof( struct atom ), 1 );
     assert(a);
@@ -269,32 +362,46 @@ create_atom( bool is_newline ){
     a->left                         = NULL;
     a->up                           = NULL;
     a->down                         = NULL;
+    
 
+    //Origin 
     if( NULL == origin ){
-        first_atom_on_last_line = origin = a;
+        _extend_dummy_rows( extend_by );
+        a->down = dummy_rows->bot_root;
+        origin = a;
     }else if(is_newline){
-        // new line, only need to set up and down.
-        first_atom_on_last_line->down = a;
-        a->up = first_atom_on_last_line;
-        first_atom_on_last_line = a;
-    }else{
-        // adding to an existing line, need to set
-        // left/right and (maybe) up/down.
+        a->down = dummy_rows->bot_root;
+    } else {
+        //NOTE: 1) It's probably better to build the first row of true atoms and
+        //         Then create the dummy rows. Speed up will be proprotional to 
+        //         the number of Atoms in the first row.
+        //      2) It also MIGHT be more efficient during extension to create a 
+        //         couple of anticipated dummies. 
+        //
+        //TODO:    Profile the latter change and modify for the former.
+        //TODO:    This isn't gonna be  memory contrained, I can for sure 
+        //         spare a few pointers to make this less horrible. 
+        if ( NULL == last_atom_on_last_line->down->right ){
+            _extend_dummy_rows( extend_by );
+            last_atom_on_last_line->down->right = dummy_rows->lower;
+        }
+
+        a->down = last_atom_on_last_line->down->right;
         last_atom_on_last_line->right = a;
         a->left = last_atom_on_last_line;
-        if(last_atom_on_last_line->up){
-            a->up = last_atom_on_last_line->up->right;
-            last_atom_on_last_line->up->right->down = a;
-        }
     }
+    
+    a->up = a->down->up;
+    a->up->down = a;
+    a->down->up = a;
     last_atom_on_last_line = a;
+
     return a;
 }
 
 
 // Conversion specifications look like this:
 // %[flags][field_width][.precision][length_modifier]specifier
-
 
 ptrdiff_t
 parse_flags( const char *p ){
@@ -394,7 +501,10 @@ calc_actual_width( struct atom *a ){
     L           f/F/e/E/a/A/g/G long double
     (none)      p               void*
 */
+    if(a->is_dummy) return;
+
     static char buf[4097]; 
+
     if( is(a->conversion_specifier, "c") ){
         if( is( a->length_modifier, "" ) ){
             a->type = C_INT;
@@ -523,28 +633,34 @@ calc_actual_width( struct atom *a ){
 
 void
 calc_max_width(){
-    struct atom *a = origin, *c;
-    assert( NULL != a );
+    // Really can't remember why I put this here but it can't hurt
+    assert( dummy_rows != NULL ); 
+    struct atom *aiter = origin, *citer, *diter; //A is the top dummy
+    assert( NULL != aiter || NULL != aiter->up);
+    diter = aiter->up;
+
     size_t w = 0;
-    while( NULL != a ){
-        if( a->is_conversion_specification ){
-            c = a;
-            while( NULL != c ){
+    while ( NULL != diter){
+        aiter = diter->down;
+        if( aiter->is_conversion_specification ){
+            citer = aiter;
+            while( citer->is_dummy == false && NULL != citer->down){ //last is a sanity check
                 // find max field width
-                if( c->original_field_width > w ){
-                    w = c->original_field_width;
+                
+                if( citer->original_field_width > w ){
+                    w = citer->original_field_width;
                 }
-                c = c->down;
+                citer = citer->down;
             }
-            c = a;
-            while( NULL != c){
+            citer = aiter;
+            while( citer->is_dummy == false){ //makes clean up easier
                 // set max field width
-                c->new_field_width = w;
-                c = c->down;
+                citer->new_field_width = w;
+                citer = citer->down;
             }
             w = 0;
         }
-        a = a->right;
+        diter = diter->right;
     }
 }
 
@@ -552,34 +668,42 @@ void
 generate_new_specs(){
     char buf[4099];
     int rc;
-    struct atom *a = origin, *c;
-    assert( NULL != a );
-    while( NULL != a ){
-        if( a->is_conversion_specification ){
-            c = a;
-            while( NULL != c ){
+    struct atom *aiter = origin, *citer;
+    struct atom *diter = aiter->up;
+    assert( NULL != aiter );
+    while( NULL != diter ){
+        aiter = diter->down;
+        if( aiter->is_conversion_specification ){
+            citer = aiter;
+            while( NULL != citer){
                 rc = snprintf(buf, 4099, "%%%s%zu%s%s%s",
-                        c->flags,
-                        c->new_field_width,
-                        c->precision,
-                        c->length_modifier,
-                        c->conversion_specifier);
+                        citer->flags,
+                        citer->new_field_width,
+                        citer->precision,
+                        citer->length_modifier,
+                        citer->conversion_specifier);
                 assert( rc < 4099 );
-                archive( buf, strlen(buf), &(c->new_specification));
-                c = c->down;
+                archive( buf, strlen(buf), &(citer->new_specification));  
+                citer = citer->down;
             }
+
         }
-        a = a->right;
+        diter = diter->right;
     }
 }
 
 void
 print_something_already(){
-    struct atom *a = origin, *c;
-    assert( NULL != a );
-    while( NULL != a ){
-        c = a;
-        while( NULL != c ){
+    // bunch of checks to see if Something horrible happened... No dummies. 
+    // TODO: REMOVE IN PROD
+    assert( NULL != origin && NULL != origin->up);
+    struct atom *a = origin->up, *c;
+    assert( NULL != a);
+    assert( NULL != a->down); 
+
+    do {
+        c = a->down;
+        while ( NULL != c) {
             if( c->is_conversion_specification ){
                 switch( c->type ){
                     case C_INT:                 fprintf( dest, c->new_specification, c->val.c_int );                break;
@@ -603,13 +727,13 @@ print_something_already(){
                                                 assert(0);
                                                 break;
                 }
-            }else{
+            } else if ( c->is_dummy == false ){
                 printf( "%s", c->ordinary_text );
             }
             c = c->right;
         }
         a = a->down;
-    }
+    } while ( a != NULL);
 }
 
 void
@@ -642,7 +766,7 @@ _cprintf( FILE *stream, const char *fmt, va_list *args ){
             a->is_conversion_specification = true;
 
             q++; // Skip over initial '%'
-
+            
             span = parse_flags( q );
             archive( q, span, &(a->flags) );
             q += span;
@@ -680,6 +804,14 @@ _cprintf( FILE *stream, const char *fmt, va_list *args ){
     }
 }
 
+//Callback for exit() to free memory
+void exit_nice(void){
+    if( NULL != dummy_rows) {
+        free_graph();
+    }
+    exit(0);
+}
+
 void
 cprintf( const char *fmt, ... ){
     va_list args;
@@ -694,9 +826,8 @@ cfprintf( FILE *stream, const char *fmt, ... ){
     va_start( args, fmt );
     _cprintf( stream, fmt, &args );
     va_end(args);
-
+    atexit( exit_nice );
 }
-
 
 void
 cvprintf( const char *fmt, va_list args ){
@@ -714,12 +845,13 @@ cvfprintf( FILE *stream, const char *fmt, va_list args ){
     va_end(args2);
 }
 
-
 void
 cflush(){ 
-    calc_max_width();
-    generate_new_specs();
-    print_something_already();
-    free_graph();
+    if( NULL != origin){ //Just for safety
+        calc_max_width();
+        generate_new_specs();
+        print_something_already();
+        free_graph();
+    }
     dest = NULL;
 }
