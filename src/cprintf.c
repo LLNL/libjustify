@@ -38,6 +38,7 @@ typedef union{
     double              c_double;
     long double         c_long_double;
     void*               c_voidx;
+    int*                c_intp;
 }value;
 
 typedef enum{
@@ -57,7 +58,8 @@ typedef enum{
     C_SIZE_T,
     C_DOUBLE,
     C_LONG_DOUBLE,
-    C_VOIDX
+    C_VOIDX,
+    C_INT_PTR
 }type_t;
 
 struct atom{
@@ -115,9 +117,9 @@ void archive( const char *p, ptrdiff_t span, char **q );
 bool is( char *p, const char *q );
 void _cprintf( FILE *stream, const char *fmt, va_list *args );
 void exit_nice(void);
+void calculate_writeback(struct atom * a);
 
 
-// Alot of this is enumerated just for readability.
 struct atom * _make_dummy( void);
 void _extend_dummy_rows(size_t size);
 void _reconnect_rows(void);
@@ -471,7 +473,6 @@ is( char *p, const char *q ){
 }
 static void
 calc_actual_width( struct atom *a ){
-    // FIXME Not (yet) supporting 'n' as a conversion specifier.
     // Reproduces the big table at 
     // https://en.cppreference.com/w/c/io/fprintf
 /*
@@ -501,6 +502,7 @@ calc_actual_width( struct atom *a ){
     (none)/l    f/F/e/E/a/A/g/G double
     L           f/F/e/E/a/A/g/G long double
     (none)      p               void*
+    (none)      n               int*
 */
     if(a->is_dummy) return; //Return early if this is a dummy atom. TODO: This isn't great fix it.
 
@@ -625,6 +627,16 @@ calc_actual_width( struct atom *a ){
         }else{
             assert(0);
         }
+    }else if ( is(a->conversion_specifier, "n") ){ // This is a writeback
+        if( is( a->length_modifier, "") ){
+            a->type = C_INT_PTR;
+            a->val.c_intp = va_arg( *(a->pargs), int* );
+            a->original_field_width = 0;
+        } else {
+            assert(0);
+        }
+        return; //TODO check if this is better trying to set field width to buf
+    
     }else{
         assert(0);
     }
@@ -693,20 +705,43 @@ generate_new_specs(){
     }
 }
 
+void 
+calculate_writeback(struct atom * a) {
+    // Calculate writeback handles %n specifiers traversing right to left summing up the field widths
+    // and then writing back the total to the pointer
+    int sum = 0;
+    for(struct atom *c = a; NULL != c; c = c->left) {
+        if(c->is_conversion_specification) {
+            sum += c->new_field_width;
+        } else if (c->ordinary_text) {
+            sum += strlen(c->ordinary_text);
+        } else {
+            assert(0);
+        }
+    }
+    if (a->val.c_intp != NULL) {
+        *a->val.c_intp = sum; //Writeback 
+    } else {
+        // handle error
+        fprintf(stderr, "Error: a->val.c_intp is NULL\n");
+    }
+}
+
 void
 print_something_already(){
     // bunch of checks to see if Something horrible happened... No dummies. 
     // TODO: REMOVE IN PROD
-    assert( NULL != origin && NULL != origin->up);
-    struct atom *a = origin->up, *c;
+    //assert( NULL != origin && NULL != origin->up);
+    struct atom *a = origin, *c;
     assert( NULL != a);
     assert( NULL != a->down); 
 
-    do {
-        c = a->down;
+    while ( NULL != a && a != dummy_rows->bot_root) {
+        c = a;
         while ( NULL != c) {
             if( c->is_conversion_specification ){
                 switch( c->type ){
+                    case C_INT_PTR:             calculate_writeback(c);                                             break;
                     case C_INT:                 fprintf( dest, c->new_specification, c->val.c_int );                break;
                     case C_WINT_T:              fprintf( dest, c->new_specification, c->val.c_wint_t );             break;
                     case C_CHARX:               fprintf( dest, c->new_specification, c->val.c_charx );              break;
@@ -728,13 +763,13 @@ print_something_already(){
                                                 assert(0);
                                                 break;
                 }
-            } else if ( c->is_dummy == false ){
+            } else {
                 printf( "%s", c->ordinary_text );
             }
             c = c->right;
         }
         a = a->down;
-    } while ( a != NULL);
+    }
 }
 
 void
@@ -756,6 +791,8 @@ _cprintf( FILE *stream, const char *fmt, va_list *args ){
     }
     // This fails if subsequent streams don't match the initial one.
     assert( dest == stream );
+
+    atexit( exit_nice ); // Set exit Callback
 
     while( *p != '\0' ){
         d = strcspn( p, "%" ); 
@@ -827,7 +864,6 @@ cfprintf( FILE *stream, const char *fmt, ... ){
     va_start( args, fmt );
     _cprintf( stream, fmt, &args );
     va_end(args);
-    atexit( exit_nice );
 }
 
 void
