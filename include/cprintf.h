@@ -13,6 +13,8 @@ void cfprintf( FILE *stream, const char* fmt, ... );
 void cvprintf( const char* fmt, va_list args );
 void cvfprintf( FILE *stream, const char* fmt, va_list args );
 
+void dump_graph( void );
+
 void cflush( void );
 #endif
 
