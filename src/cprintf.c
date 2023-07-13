@@ -14,7 +14,7 @@
 #include <wchar.h>      // wint_t
 #include <stdint.h>     // intmax_t
 #include <uchar.h>
-#include "cprintf.h"
+#include <cprintf.h>
 
 
 // These are the types that printf and friends are aware of.
@@ -681,27 +681,24 @@ void
 generate_new_specs(){
     char buf[4099];
     int rc;
-    struct atom *aiter = origin, *citer;
-    struct atom *diter = aiter->up;
-    assert( NULL != aiter );
-    while( NULL != diter ){
-        aiter = diter->down;
-        if( aiter->is_conversion_specification ){
-            citer = aiter;
-            while( NULL != citer){
+    struct atom *a = dummy_rows->top_root, *c; //A is the top dummy row.
+    assert( NULL != a );
+    while( NULL != a){
+        if( a->down->is_conversion_specification ){ 
+            c = a->down;
+            while( NULL != c ){
                 rc = snprintf(buf, 4099, "%%%s%zu%s%s%s",
-                        citer->flags,
-                        citer->new_field_width,
-                        citer->precision,
-                        citer->length_modifier,
-                        citer->conversion_specifier);
+                        c->flags,
+                        c->new_field_width,
+                        c->precision,
+                        c->length_modifier,
+                        c->conversion_specifier);
                 assert( rc < 4099 );
-                archive( buf, strlen(buf), &(citer->new_specification));  
-                citer = citer->down;
+                archive( buf, strlen(buf), &(c->new_specification));
+                c = c->down;
             }
-
         }
-        diter = diter->right;
+        a = a->right;
     }
 }
 

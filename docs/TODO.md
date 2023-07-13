@@ -13,3 +13,5 @@
 6. ) It would be nice to have a way to alter previous cprintf() specifiers or update them.
 
 7. ) Bunch of loops can be changed to do while.
+
+8. ) Evaluate the %n callback. It's unsafe enough as is and I don't want to introduce any additional issues.
