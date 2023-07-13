@@ -650,7 +650,7 @@ calc_max_width(){
     assert( dummy_rows != NULL ); 
     struct atom *aiter = origin, *citer, *diter; //A is the top dummy
     assert( NULL != aiter || NULL != aiter->up);
-    diter = aiter->up;
+    diter = dummy_rows->top_root;
 
     size_t w = 0;
     while ( NULL != diter){
@@ -677,7 +677,31 @@ calc_max_width(){
     }
 }
 
-void
+void generate_new_specs(){
+    char buf[4099];
+    int rc;
+    struct atom *a = dummy_rows->top_root, *c; //A is the top dummy row.
+    assert( NULL != a );
+    while( NULL != a){
+        c = a;
+        while( NULL != c ){
+            if( c->is_conversion_specification ){ 
+                rc = snprintf(buf, 4099, "%%%s%zu%s%s%s",
+                        c->flags,
+                        c->new_field_width,
+                        c->precision,
+                        c->length_modifier,
+                        c->conversion_specifier);
+                assert( rc < 4099 );
+                archive( buf, strlen(buf), &(c->new_specification));
+            }
+            c = c->down;
+        }
+        a = a->right;
+    }
+}
+
+/*void
 generate_new_specs(){
     char buf[4099];
     int rc;
@@ -700,7 +724,7 @@ generate_new_specs(){
         }
         a = a->right;
     }
-}
+}*/
 
 void 
 calculate_writeback(struct atom * a) {
@@ -760,7 +784,7 @@ print_something_already(){
                                                 assert(0);
                                                 break;
                 }
-            } else {
+            } else if ( c->is_dummy == false ){
                 printf( "%s", c->ordinary_text );
             }
             c = c->right;
