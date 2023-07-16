@@ -103,11 +103,23 @@ struct dummy_rows_ds {
     struct atom *top_root; // Allows free_graph() to be a bit dumber. TODO: THIS IS ONLY USED FOR FREE_GRAPH().  REMOVE IT.
 };
 
+
 void dump_graph( void );
 void _free_graph( struct atom *a );
 void free_graph();
 
 struct atom * create_atom( bool is_newline );
+
+//Enumerated methods to handle different cases of atom creation.
+struct atom * _handle_origin_null( struct atom *a, int extend_by);
+struct atom * _handle_new_line(struct atom *a);
+struct atom * _link_normal_atom(struct atom* a, struct atom * curr_lower_dummy, int extend_by);
+
+//Enumerate methods to handle dummy rows.
+struct atom * _make_dummy( void);
+void _extend_dummy_rows(size_t size);
+void _reconnect_rows(void);
+
 ptrdiff_t parse_flags( const char *p );
 ptrdiff_t parse_field_width( const char *p );
 ptrdiff_t parse_precision( const char *p );
@@ -116,14 +128,14 @@ ptrdiff_t parse_conversion_specifier( const char *p );
 void archive( const char *p, ptrdiff_t span, char **q );
 bool is( char *p, const char *q );
 void _cprintf( FILE *stream, const char *fmt, va_list *args );
+
 void exit_nice(void);
 void calculate_writeback(struct atom * a);
 
 
-struct atom * _make_dummy( void);
-void _extend_dummy_rows(size_t size);
-void _reconnect_rows(void);
-
+// Might be nice to take these and turn them into their
+// own struct called state or something.
+static struct atom *last_atom_on_last_line = NULL;
 static struct atom *origin = NULL;
 static struct dummy_rows_ds *dummy_rows = NULL;
 static FILE *dest = NULL;
@@ -340,11 +352,36 @@ free_graph(){
     dummy_rows = NULL;
 }
 
+struct atom* 
+_handle_origin_null(struct atom *a, int extend_by) {
+    _extend_dummy_rows(extend_by);
+    a->down = dummy_rows->bot_root;
+    origin = a;
+    return a;
+}
+
+struct atom* 
+_handle_new_line(struct atom *a) {
+    a->down = dummy_rows->bot_root;
+    return a;
+}
+
+struct atom*
+_link_normal_atom(struct atom *a, struct atom *curr_lower_dummy, int extend_by) {
+    if(curr_lower_dummy == NULL) {
+        _extend_dummy_rows(extend_by);
+        curr_lower_dummy = dummy_rows->lower;
+    }
+    a->down = curr_lower_dummy;
+    last_atom_on_last_line->right = a;
+    a->left = last_atom_on_last_line;
+    return a;
+}
 
 struct atom *
 create_atom( bool is_newline ){
     const size_t extend_by = 1;
-    static struct atom *last_atom_on_last_line = NULL;
+    struct atom *curr_lower_dummy = NULL;
 
     struct atom *a = calloc( sizeof( struct atom ), 1 );
     assert(a);
@@ -370,11 +407,10 @@ create_atom( bool is_newline ){
 
     //Origin 
     if( NULL == origin ){
-        _extend_dummy_rows( extend_by );
-        a->down = dummy_rows->bot_root;
-        origin = a;
+        a = _handle_origin_null(a, extend_by);
     }else if(is_newline){
-        a->down = dummy_rows->bot_root;
+        //a->down = dummy_rows->bot_root;
+        a = _handle_new_line(a);
     } else {
         //NOTE: 1) It's probably better to build the first row of true atoms and
         //         Then create the dummy rows. Speed up will be proprotional to 
@@ -385,14 +421,9 @@ create_atom( bool is_newline ){
         //TODO:    Profile the latter change and modify for the former.
         //TODO:    This isn't gonna be  memory contrained, I can for sure 
         //         spare a few pointers to make this less horrible. 
-        if ( NULL == last_atom_on_last_line->down->right ){
-            _extend_dummy_rows( extend_by );
-            last_atom_on_last_line->down->right = dummy_rows->lower;
-        }
 
-        a->down = last_atom_on_last_line->down->right;
-        last_atom_on_last_line->right = a;
-        a->left = last_atom_on_last_line;
+        curr_lower_dummy = last_atom_on_last_line->down->right;
+        a = _link_normal_atom(a, curr_lower_dummy, extend_by);
     }
     
     a->up = a->down->up;
@@ -418,18 +449,24 @@ parse_field_width( const char *p ){
     // Returns the number of bytes in the field width,
     // or zero of no field width specified.
     char *end;
-    assert( '*' != *p );    // Don't support * or *n$ (yet).
+    if( '*' == *p ){
+        fprintf(stderr, "Error in parse_field_width: * and *n$ are not supported.\n");
+        exit_nice();
+    }
     strtol( p, &end, 10 );
     return end - p;
 }
 
- ptrdiff_t
+ptrdiff_t
 parse_precision( const char *p ){
     char *end;
     // Returns the number of bytes representing
     // precision, including the leading '.'.  
     if( '.' == *p ){
-        assert( '*' != *(p+1) ); // Don't support * or *n$ (yet).
+        if( '*' == *(p+1) ){
+            fprintf(stderr, "Error in parse_precision: * and *n$ are not supported.\n");
+            exit_nice();
+        }
         strtol( p+1, &end, 10 );
         return (end - p); 
     }else{
@@ -450,7 +487,10 @@ parse_conversion_specifier( const char *p ){
     // d, i, o, u, x, X, e, E, f, F, g, G, a, A, c, C, s, S, p, n, m, %
     size_t d = strspn( p, "diouxXeEfFgGaAcCsSpnm%" );
     // This one is mandatory and there can only be one.
-    assert( d==1 );
+    if ( d != 1) {
+        fprintf(stderr, "Error: Invalid conversion specifier.\n");
+        exit_nice();
+    }
     return d;
 }
 
