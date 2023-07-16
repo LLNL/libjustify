@@ -113,9 +113,10 @@ struct atom * create_atom( bool is_newline );
 //Enumerated methods to handle different cases of atom creation.
 struct atom * _handle_origin_null( struct atom *a, int extend_by);
 struct atom * _handle_new_line(struct atom *a);
-struct atom * _link_normal_atom(struct atom* a, struct atom * curr_lower_dummy, int extend_by);
+struct atom * _link_normal_atom(struct atom *a, struct atom *curr_lower_dummy, int extend_by);
 
 //Enumerate methods to handle dummy rows.
+void _create_dummy_rows(void);
 struct atom * _make_dummy( void);
 void _extend_dummy_rows(size_t size);
 void _reconnect_rows(void);
@@ -130,7 +131,8 @@ bool is( char *p, const char *q );
 void _cprintf( FILE *stream, const char *fmt, va_list *args );
 
 void exit_nice(void);
-void calculate_writeback(struct atom * a);
+void cprintf_error( char *err_msg, int err_code );
+void calculate_writeback(struct atom *a);
 
 
 // Might be nice to take these and turn them into their
@@ -144,7 +146,10 @@ static FILE *dest = NULL;
 struct atom *
 _make_dummy( void ) {
     struct atom *a = calloc( sizeof( struct atom ), 1 );
-    assert(a);
+
+    if(NULL == a){
+        cprintf_error("Memory allocation failed.", EXIT_FAILURE);
+    }
 
     a->original_specification       = NULL;
     a->new_specification            = NULL;
@@ -165,9 +170,19 @@ _make_dummy( void ) {
 
     a->is_dummy                     = true;
 
+    // TODO: Probably not necessary.
     a->is_conversion_specification  = false;
     return a;
 };
+
+
+void
+_create_dummy_rows(void){
+    dummy_rows = calloc(1, sizeof(struct dummy_rows_ds));
+    if (NULL == dummy_rows) {
+        cprintf_error("Memory allocation failed.", EXIT_FAILURE);
+    }
+}
 
 
 void
@@ -179,15 +194,20 @@ _extend_dummy_rows(size_t size) {
         new_top = _make_dummy();
         new_bottom = _make_dummy();
 
+        if(NULL == new_top || NULL == new_bottom){
+            cprintf_error("Memory allocation failed.", EXIT_FAILURE);
+        }
+
         new_top->down = new_bottom;
         new_bottom->up = new_top;
 
         if (NULL == dummy_rows){
-            dummy_rows = calloc(1, sizeof(struct dummy_rows_ds));
-            if (NULL == dummy_rows) {
-                fprintf(stderr, "Memory allocation failed.\n");
-                exit(EXIT_FAILURE);
+            _create_dummy_rows();
+
+            if(NULL == dummy_rows){ //Double check, can't hurt.
+                cprintf_error("Memory allocation failed.", EXIT_FAILURE);
             }
+
             dummy_rows->bot_root = new_bottom;
             dummy_rows->top_root = new_top;
         } else {
@@ -197,11 +217,15 @@ _extend_dummy_rows(size_t size) {
             dummy_rows->lower->right = new_bottom;
         }
 
-        assert(dummy_rows != NULL);
+        if( NULL == dummy_rows ){
+            cprintf_error("Memory allocation failed.", EXIT_FAILURE);
+        }
+
         dummy_rows->upper = new_top;
         dummy_rows->lower = new_bottom;
     }
 };
+
 
 void
 dump_graph( void ){
@@ -293,6 +317,13 @@ dump_graph( void ){
     fflush(NULL);
 }
 
+
+void cprintf_error(char *err_msg, int err_code){
+    fprintf(stderr, "%s\n", err_msg);
+    free_graph();
+    exit(err_code);
+}
+
 //TODO CLEAN THIS UP. USING DUMMY_ROWS->UPPER AS THE ROOT OF THE UPPER IS VERY HACKY.
 void
 _free_graph( struct atom *a ){
@@ -352,7 +383,7 @@ free_graph(){
     dummy_rows = NULL;
 }
 
-struct atom* 
+struct atom*
 _handle_origin_null(struct atom *a, int extend_by) {
     _extend_dummy_rows(extend_by);
     a->down = dummy_rows->bot_root;
@@ -360,7 +391,7 @@ _handle_origin_null(struct atom *a, int extend_by) {
     return a;
 }
 
-struct atom* 
+struct atom*
 _handle_new_line(struct atom *a) {
     a->down = dummy_rows->bot_root;
     return a;
@@ -384,8 +415,11 @@ create_atom( bool is_newline ){
     struct atom *curr_lower_dummy = NULL;
 
     struct atom *a = calloc( sizeof( struct atom ), 1 );
+    if (NULL == a) {
+        cprintf_error("Memory allocation failed.", EXIT_FAILURE);
+    }
     assert(a);
-    
+
     // recall the value of NULL is implementation-specific.
     a->original_specification       = NULL;
     a->new_specification            = NULL;
@@ -403,9 +437,8 @@ create_atom( bool is_newline ){
     a->left                         = NULL;
     a->up                           = NULL;
     a->down                         = NULL;
-    
 
-    //Origin 
+    //Origin
     if( NULL == origin ){
         a = _handle_origin_null(a, extend_by);
     }else if(is_newline){
@@ -413,19 +446,17 @@ create_atom( bool is_newline ){
         a = _handle_new_line(a);
     } else {
         //NOTE: 1) It's probably better to build the first row of true atoms and
-        //         Then create the dummy rows. Speed up will be proprotional to 
+        //         Then create the dummy rows. Speed up will be proprotional to
         //         the number of Atoms in the first row.
-        //      2) It also MIGHT be more efficient during extension to create a 
-        //         couple of anticipated dummies. 
+        //      2) It also MIGHT be more efficient during extension to create a
+        //         couple of anticipated dummies.
         //
         //TODO:    Profile the latter change and modify for the former.
-        //TODO:    This isn't gonna be  memory contrained, I can for sure 
-        //         spare a few pointers to make this less horrible. 
 
         curr_lower_dummy = last_atom_on_last_line->down->right;
         a = _link_normal_atom(a, curr_lower_dummy, extend_by);
     }
-    
+
     a->up = a->down->up;
     a->up->down = a;
     a->down->up = a;
@@ -450,8 +481,7 @@ parse_field_width( const char *p ){
     // or zero of no field width specified.
     char *end;
     if( '*' == *p ){
-        fprintf(stderr, "Error in parse_field_width: * and *n$ are not supported.\n");
-        exit_nice();
+        cprintf_error("Error in parse_field_width: * and *n$ are not supported.", EXIT_FAILURE);
     }
     strtol( p, &end, 10 );
     return end - p;
@@ -461,35 +491,33 @@ ptrdiff_t
 parse_precision( const char *p ){
     char *end;
     // Returns the number of bytes representing
-    // precision, including the leading '.'.  
+    // precision, including the leading '.'.
     if( '.' == *p ){
         if( '*' == *(p+1) ){
-            fprintf(stderr, "Error in parse_precision: * and *n$ are not supported.\n");
-            exit_nice();
+            cprintf_error("Error in parse_precision: * and *n$ are not supported.", EXIT_FAILURE);
         }
         strtol( p+1, &end, 10 );
-        return (end - p); 
+        return (end - p);
     }else{
         return 0;
     }
 }
 
-ptrdiff_t 
+ptrdiff_t
 parse_length_modifier( const char *p ){
     // length modifiers are:
     // h, hh, l, ll, L, q, j, z, t
     return strspn( p, "hlLqjzt" );
 }
 
-ptrdiff_t 
+ptrdiff_t
 parse_conversion_specifier( const char *p ){
     // conversion specifiers are:
     // d, i, o, u, x, X, e, E, f, F, g, G, a, A, c, C, s, S, p, n, m, %
     size_t d = strspn( p, "diouxXeEfFgGaAcCsSpnm%" );
     // This one is mandatory and there can only be one.
     if ( d != 1) {
-        fprintf(stderr, "Error: Invalid conversion specifier.\n");
-        exit_nice();
+        cprintf_error("Error in parse_conversion_specifier: Invalid conversion specifier.", EXIT_FAILURE);
     }
     return d;
 }
@@ -513,7 +541,7 @@ is( char *p, const char *q ){
 }
 static void
 calc_actual_width( struct atom *a ){
-    // Reproduces the big table at 
+    // Reproduces the big table at
     // https://en.cppreference.com/w/c/io/fprintf
 /*
     length      conversion
@@ -546,7 +574,7 @@ calc_actual_width( struct atom *a ){
 */
     if(a->is_dummy) return; //Return early if this is a dummy atom. TODO: This isn't great fix it.
 
-    static char buf[4097]; 
+    static char buf[4097];
 
     if( is(a->conversion_specifier, "c") ){
         if( is( a->length_modifier, "" ) ){
@@ -558,7 +586,7 @@ calc_actual_width( struct atom *a ){
             a->val.c_wint_t = va_arg( *(a->pargs), wint_t );
             snprintf( buf, 4096, a->original_specification, a->val.c_wint_t );
         }else{
-            assert(0);
+            cprintf_error("Error in calc_actual_width: Invalid length modifier for \%c", EXIT_FAILURE);
         }
     }else if( is(a->conversion_specifier, "s") ){
         if( is( a->length_modifier, "" ) ){
@@ -570,12 +598,13 @@ calc_actual_width( struct atom *a ){
             a->val.c_wchar_tx = va_arg( *(a->pargs), wchar_t* );
             snprintf( buf, 4096, a->original_specification, a->val.c_wchar_tx );
         }else{
+            cprintf_error("Error in calc_actual_width: Invalid length modifier for \%s", EXIT_FAILURE);
             assert(0);
         }
-    }else if( is(a->conversion_specifier, "d") 
+    }else if( is(a->conversion_specifier, "d")
           ||  is(a->conversion_specifier, "i") ){
-        if( is( a->length_modifier, "hh" ) 
-        ||  is( a->length_modifier, "h" ) 
+        if( is( a->length_modifier, "hh" )
+        ||  is( a->length_modifier, "h" )
         ||  is( a->length_modifier, "" ) ){
             a->type = C_INT;
             a->val.c_int = va_arg( *(a->pargs), int );
@@ -601,13 +630,13 @@ calc_actual_width( struct atom *a ){
             a->val.c_ptrdiff_t = va_arg( *(a->pargs), ptrdiff_t );
             snprintf( buf, 4096, a->original_specification, a->val.c_ptrdiff_t );
         }else{
-            assert(0);
+            cprintf_error("Error in calc_actual_width: Invalid length modifier for \%d or \%i", EXIT_FAILURE);
         }
-    }else if( is(a->conversion_specifier, "o") 
-          ||  is(a->conversion_specifier, "x") 
-          ||  is(a->conversion_specifier, "X") 
+    }else if( is(a->conversion_specifier, "o")
+          ||  is(a->conversion_specifier, "x")
+          ||  is(a->conversion_specifier, "X")
           ||  is(a->conversion_specifier, "u") ){
-        if( is( a->length_modifier, "hh" ) 
+        if( is( a->length_modifier, "hh" )
         ||  is( a->length_modifier, "h" ) ){
             a->type = C_INT;
             a->val.c_int = va_arg( *(a->pargs), int );
@@ -637,15 +666,15 @@ calc_actual_width( struct atom *a ){
             a->val.c_ptrdiff_t = va_arg( *(a->pargs), ptrdiff_t );
             snprintf( buf, 4096, a->original_specification, a->val.c_ptrdiff_t );
         }else{
-            assert(0);
+            cprintf_error("Error in calc_actual_width: Invalid length modifier for \%o, \%x, \%X, or \%u", EXIT_FAILURE);
         }
-    }else if( is(a->conversion_specifier, "f") 
-          ||  is(a->conversion_specifier, "F") 
-          ||  is(a->conversion_specifier, "e") 
-          ||  is(a->conversion_specifier, "E") 
-          ||  is(a->conversion_specifier, "a") 
-          ||  is(a->conversion_specifier, "A") 
-          ||  is(a->conversion_specifier, "g") 
+    }else if( is(a->conversion_specifier, "f")
+          ||  is(a->conversion_specifier, "F")
+          ||  is(a->conversion_specifier, "e")
+          ||  is(a->conversion_specifier, "E")
+          ||  is(a->conversion_specifier, "a")
+          ||  is(a->conversion_specifier, "A")
+          ||  is(a->conversion_specifier, "g")
           ||  is(a->conversion_specifier, "G") ){
         if( is( a->length_modifier, "l" )
         ||  is( a->length_modifier, "" ) ){
@@ -657,7 +686,7 @@ calc_actual_width( struct atom *a ){
             a->val.c_long_double = va_arg( *(a->pargs), long double );
             snprintf( buf, 4096, a->original_specification, a->val.c_long_double );
         }else{
-            assert(0);
+            cprintf_error("Error in calc_actual_width: Invalid length modifier for \%f, \%F, \%e, \%E, \%a, \%A, \%g, or \%G", EXIT_FAILURE);
         }
     }else if( is(a->conversion_specifier, "p") ){
         if( is( a->length_modifier, "" ) ){
@@ -665,7 +694,7 @@ calc_actual_width( struct atom *a ){
             a->val.c_voidx = va_arg( *(a->pargs), void* );
             snprintf( buf, 4096, a->original_specification, a->val.c_voidx );
         }else{
-            assert(0);
+            cprintf_error("Error in calc_actual_width: Invalid length modifier for \%p", EXIT_FAILURE);
         }
     }else if ( is(a->conversion_specifier, "n") ){ // This is a writeback
         if( is( a->length_modifier, "") ){
@@ -673,14 +702,16 @@ calc_actual_width( struct atom *a ){
             a->val.c_intp = va_arg( *(a->pargs), int* );
             a->original_field_width = 0;
         } else {
-            assert(0);
+            cprintf_error("Error in calc_actual_width: Invalid length modifier for \%n", EXIT_FAILURE);
         }
         return; //TODO check if this is better trying to set field width to buf
-    
     }else{
-        assert(0);
+        cprintf_error("Error in calc_actual_width: Invalid conversion specifier.", EXIT_FAILURE);
     }
-    assert( strnlen(buf, 4096) < 4095 );
+
+    if( strnlen(buf, 4096) > 4095 ){
+        cprintf_error("Error in calc_actual_width: snprintf truncated.", EXIT_FAILURE);
+    }
     a->original_field_width = strlen( buf );
 }
 
@@ -689,7 +720,9 @@ calc_max_width(){
     // Really can't remember why I put this here but it can't hurt
     assert( dummy_rows != NULL ); 
     struct atom *aiter = origin, *citer, *diter; //A is the top dummy
-    assert( NULL != aiter || NULL != aiter->up);
+    if ( NULL == aiter ){
+        cprintf_error("Error in calc_max_width: origin is null.", EXIT_FAILURE);
+    }
     diter = dummy_rows->top_root;
 
     size_t w = 0;
@@ -699,7 +732,6 @@ calc_max_width(){
             citer = aiter;
             while( citer->is_dummy == false && NULL != citer->down){ //last is a sanity check
                 // find max field width
-                
                 if( citer->original_field_width > w ){
                     w = citer->original_field_width;
                 }
@@ -721,11 +753,13 @@ void generate_new_specs(){
     char buf[4099];
     int rc;
     struct atom *a = dummy_rows->top_root, *c; //A is the top dummy row.
-    assert( NULL != a );
+    if ( NULL == a ){
+        cprintf_error("Error in generate_new_specs: origin is null.", EXIT_FAILURE);
+    }
     while( NULL != a){
         c = a;
         while( NULL != c ){
-            if( c->is_conversion_specification ){ 
+            if( c->is_conversion_specification ){
                 rc = snprintf(buf, 4099, "%%%s%zu%s%s%s",
                         c->flags,
                         c->new_field_width,
@@ -740,31 +774,6 @@ void generate_new_specs(){
         a = a->right;
     }
 }
-
-/*void
-generate_new_specs(){
-    char buf[4099];
-    int rc;
-    struct atom *a = dummy_rows->top_root, *c; //A is the top dummy row.
-    assert( NULL != a );
-    while( NULL != a){
-        if( a->down->is_conversion_specification ){ 
-            c = a->down;
-            while( NULL != c ){
-                rc = snprintf(buf, 4099, "%%%s%zu%s%s%s",
-                        c->flags,
-                        c->new_field_width,
-                        c->precision,
-                        c->length_modifier,
-                        c->conversion_specifier);
-                assert( rc < 4099 );
-                archive( buf, strlen(buf), &(c->new_specification));
-                c = c->down;
-            }
-        }
-        a = a->right;
-    }
-}*/
 
 void 
 calculate_writeback(struct atom * a) {
@@ -781,7 +790,7 @@ calculate_writeback(struct atom * a) {
         }
     }
     if (a->val.c_intp != NULL) {
-        *a->val.c_intp = sum; //Writeback 
+        *a->val.c_intp = sum; //Writeback
     } else {
         // handle error
         fprintf(stderr, "Error: a->val.c_intp is NULL\n");
@@ -790,12 +799,12 @@ calculate_writeback(struct atom * a) {
 
 void
 print_something_already(){
-    // bunch of checks to see if Something horrible happened... No dummies. 
+    // bunch of checks to see if Something horrible happened... No dummies.
     // TODO: REMOVE IN PROD
     //assert( NULL != origin && NULL != origin->up);
     struct atom *a = origin, *c;
     assert( NULL != a);
-    assert( NULL != a->down); 
+    assert( NULL != a->down);
 
     while ( NULL != a && a != dummy_rows->bot_root) {
         c = a;
@@ -839,6 +848,18 @@ _cprintf( FILE *stream, const char *fmt, va_list *args ){
     const char *p = fmt, *q = fmt;
     ptrdiff_t d = 0;
     ptrdiff_t span;
+    static bool exit_callback_constructed = false;
+
+    if(fileno(stream) == -1) {
+        cprintf_error("Error: Invalid stream\n", EXIT_FAILURE);
+    }
+    if(fmt == NULL) {
+        cprintf_error("Error: Invalid format string\n", EXIT_FAILURE);
+        exit_nice();
+    }
+    if(args == NULL) {
+        cprintf_error("Error: Invalid args\n", EXIT_FAILURE);
+    }
     /* There's a reasonable argument that newlines should be indicated by
        '\n' in the ordinary text, which would allow successive calls to 
        cprintf() to populate a single line.  This raises, however, the
@@ -850,26 +871,35 @@ _cprintf( FILE *stream, const char *fmt, va_list *args ){
     if( dest == NULL ){
         dest = stream;
     }
-    // This fails if subsequent streams don't match the initial one.
-    assert( dest == stream );
 
-    atexit( exit_nice ); // Set exit Callback
+    if (dest != stream){
+        cprintf_error("Error: Multiple streams not supported.", EXIT_FAILURE);
+    }
+
+    if( !exit_callback_constructed ){
+        exit_callback_constructed = true;
+        atexit( exit_nice ); // Set exit Callback
+    }
 
     while( *p != '\0' ){
-        d = strcspn( p, "%" ); 
+        d = strcspn( p, "%" );
         q = p;
         if( d == 0 ){
             // We've found a converstion specification.
             a = create_atom( is_newline );
+
+            if (a == NULL){
+                cprintf_error("Error: Memory allocation failed.", EXIT_FAILURE);
+            }
             a->pargs = args;
             a->is_conversion_specification = true;
 
             q++; // Skip over initial '%'
-            
+
             span = parse_flags( q );
             archive( q, span, &(a->flags) );
             q += span;
-            
+
             span = parse_field_width( q );
             archive( q, span, &(a->field_width) );
             q += span;
@@ -886,7 +916,11 @@ _cprintf( FILE *stream, const char *fmt, va_list *args ){
             archive( q, span, &(a->conversion_specifier) );
             q += span;
 
-            archive( p, q-p, &(a->original_specification) ); 
+            if(span < 0) {
+                cprintf_error("Error: Invalid conversion specifier.", EXIT_FAILURE);
+            }
+
+            archive( p, q-p, &(a->original_specification) );
 
             calc_actual_width( a );
             a->pargs = NULL;    // cleanup
@@ -944,7 +978,7 @@ cvfprintf( FILE *stream, const char *fmt, va_list args ){
 }
 
 void
-cflush(){ 
+cflush(){
     if( NULL != origin){ //Just for safety
         calc_max_width();
         generate_new_specs();
