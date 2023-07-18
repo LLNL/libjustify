@@ -25,10 +25,6 @@ endif()
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
-    #include(CMake/SetupTests.cmake)
 endif()
 
 add_subdirectory(src)
-
-#install(EXPORT libjustify DESTINATION lib/cmake)
-#include_directories(include)
