@@ -1,12 +1,34 @@
-cmake_minimum_required(VERSION 3.16)
-project(MultiplyTest LANGUAGES CXX C)
+# Copyright 2023 Lawrence Livermore National Security, LLC and other
+# libjustify Project Developers. See the top-level LICENSE file for details.
+#
+# SPDX-License-Identifier: MIT
+
+# avoid warnings for project commands w/o VERSION
+cmake_policy(SET CMP0048 NEW)
+
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+
+project(libjustify VERSION "0.1.0" LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(BUILD_TESTS               "Build tests"                            ON)
+
+### Enable warnings
+if(ENABLE_WARNINGS)
+    ENABLE_WARNINGS()
+endif()
+
 # Generate tests
-enable_testing()
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+    #include(CMake/SetupTests.cmake)
+endif()
 
 add_subdirectory(src)
-add_subdirectory(tests)
+
+#install(EXPORT libjustify DESTINATION lib/cmake)
+#include_directories(include)

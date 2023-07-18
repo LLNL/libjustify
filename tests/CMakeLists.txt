@@ -1,3 +1,10 @@
+# Copyright 2023 Lawrence Livermore National Security, LLC and other
+# libjustify Project Developers. See the top-level LICENSE file for details.
+#
+# SPDX-License-Identifier: MIT
+
+message(STATUS "Downloading & Configuring Google Test (This may take a minute)...")
+
 include(FetchContent)
 
 FetchContent_Declare(
