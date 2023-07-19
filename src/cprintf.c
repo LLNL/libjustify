@@ -197,26 +197,25 @@ teardown(void) {
 void 
 rebuild_state(struct atom *a) {
 
-
     struct atom* top_left = NULL;
     struct atom* top_right = NULL;
     struct atom* bot_left = NULL;
     struct atom* bot_right = NULL;
 
-    while (a == NULL) {
-        if (state->top_left) {
-            a = state->top_left;
-        } else if (state->top_right) {
-            a = state->top_right;
-        } else if (state->bot_left) {
-            a = state->bot_left;
-        } else if (state->bot_right) {
-            a = state->bot_right;
-        } else {
-            cprintf_error("State has no corners to rebuild from.");
-        }
-        update_corners(a, &top_left, &top_right, &bot_left, &bot_right);
+    //Grab any corner we can locate 
+    if (state->top_left) {
+        a = state->top_left;
+    } else if (state->top_right) {
+        a = state->top_right;
+    } else if (state->bot_left) {
+        a = state->bot_left;
+    } else if (state->bot_right) {
+        a = state->bot_right;
+    } else {
+        cprintf_error("State has no corners to rebuild from.");
     }
+
+    update_corners(a, &top_left, &top_right, &bot_left, &bot_right);
 
     // Update the state
     state->top_left = (top_left) ? top_left : state->top_left;
@@ -225,12 +224,12 @@ rebuild_state(struct atom *a) {
     state->bot_right = (bot_right) ? bot_right : state->bot_right;
 
     // Also update the origin if needed
-    state->origin = top_left ? top_left->down : NULL;
+    state->origin = state->origin ? state->origin : top_left->down;
 }
 
 // Recursive function to update the corners
 // TODO: Maybe a search algorithm would be better?
-//       THIS IS EXPENSIVE AND SHOULDN"T OCCUR.
+// NOTE: THIS IS EXPENSIVE AND SHOULDN'T OCCUR.
 void update_corners(struct atom* a, struct atom** top_left, struct atom** top_right, 
                     struct atom** bot_left, struct atom** bot_right) {
     // If atom is NULL or all corners have been found, exit.
@@ -271,7 +270,7 @@ struct atom
         }
         rv = state->top_left;
     }
-    return state->top_left;
+    return rv;
 }
 
 struct atom *
@@ -305,7 +304,6 @@ _make_dummy( void ) {
     a->is_conversion_specification  = false;
     return a;
 };
-
 
 
 void
@@ -352,6 +350,7 @@ _extend_dummy_rows(size_t size) {
 
     }
 };
+
 
 void
 dump_graph( void ){
@@ -448,6 +447,7 @@ dump_graph( void ){
     fflush(NULL);
 }
 
+
 void cprintf_error(char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -455,10 +455,13 @@ void cprintf_error(char *fmt, ...) {
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
     va_end(args);
-
+    //TODO: Could try to rebuild the state in here
+    //rebuild_state(0); // this will throw it's own errors if it fails.
+    //free_graph();
     teardown();
     exit(EXIT_FAILURE);
 }
+
 
 void cprintf_warning(char *fmt, ...) {
     va_list args;
@@ -470,7 +473,6 @@ void cprintf_warning(char *fmt, ...) {
 }
 
 
-//TODO CLEAN THIS UP. USING DUMMY_ROWS->UPPER AS THE ROOT OF THE UPPER IS VERY HACKY.
 void
 _free_graph( struct atom *a ){
 
@@ -485,6 +487,9 @@ _free_graph( struct atom *a ){
         cprintf_warning("Attempted to free a graph with a NULL top_left state, this is likely a \
                          bug\n. We will locate origin if it exists and try to free.");
         top_left_finder_safe(); // Fixes state->top_left if it got broken.
+    }
+    if (NULL == state->origin) {
+        return;
     }
     if (NULL == a) {
         a = top_left_finder_safe(); // Fixes state->top_left if it got broken.
@@ -504,7 +509,8 @@ _free_graph( struct atom *a ){
     // corner, we're done.
     // If top_left got broken, 
     if (a == state->top_left){ 
-        teardown(); // Reset the state of the graph.
+        state->origin = NULL;
+        state->top_left = NULL;
     }
 
     // If there's an atom above us, disconnect from it.
@@ -532,8 +538,7 @@ _free_graph( struct atom *a ){
 
 void
 free_graph(){
-    //top_left_finder_safe();
-    _free_graph( state->top_left ); //Go to the dummy row. This is kinda convoluted
+    _free_graph( top_left_finder_safe() ); //Go to the dummy row. This is kinda convoluted
 }
 
 //NOTE: It's probably better to build the first row of true atoms and
@@ -556,6 +561,7 @@ _handle_origin_null(struct atom *a, int extend_by) {
     return a;
 }
 
+
 struct atom*
 _handle_new_line(struct atom *a) {
     if( NULL == a ){
@@ -568,6 +574,7 @@ _handle_new_line(struct atom *a) {
     }
     return a;
 }
+
 
 struct atom*
 _link_normal_atom(struct atom *a, struct atom *curr_lower_dummy, int extend_by) {
@@ -584,6 +591,7 @@ _link_normal_atom(struct atom *a, struct atom *curr_lower_dummy, int extend_by) 
     a->left = state->last_atom_on_last_line;
     return a;
 }
+
 
 struct atom *
 create_atom( bool is_newline ){
@@ -648,6 +656,7 @@ parse_flags( const char *p ){
     return strspn( p, "#0- +'I" );
 }
 
+
 ptrdiff_t
 parse_field_width( const char *p ){
     // Returns the number of bytes in the field width,
@@ -659,6 +668,7 @@ parse_field_width( const char *p ){
     strtol( p, &end, 10 );
     return end - p;
 }
+
 
 ptrdiff_t
 parse_precision( const char *p ){
@@ -676,12 +686,14 @@ parse_precision( const char *p ){
     }
 }
 
+
 ptrdiff_t
 parse_length_modifier( const char *p ){
     // length modifiers are:
     // h, hh, l, ll, L, q, j, z, t
     return strspn( p, "hlLqjzt" );
 }
+
 
 ptrdiff_t
 parse_conversion_specifier( const char *p ){
@@ -695,6 +707,7 @@ parse_conversion_specifier( const char *p ){
     return d;
 }
 
+
 void
 archive( const char *p, ptrdiff_t span, char **q ){
     // This will call calloc for null strings (strings with
@@ -704,6 +717,7 @@ archive( const char *p, ptrdiff_t span, char **q ){
     strncpy( *q, p, span );
 }
 
+
 bool
 is( char *p, const char *q ){
     // return true if the strings are identical.  Note either p or q
@@ -712,6 +726,8 @@ is( char *p, const char *q ){
     size_t lenq = strlen( q );
     return lenp == lenq ? (bool) ! strncmp( p, q, lenq ) : false;
 }
+
+
 static void
 calc_actual_width( struct atom *a ){
     // Reproduces the big table at
@@ -887,6 +903,7 @@ calc_actual_width( struct atom *a ){
     a->original_field_width = strlen( buf );
 }
 
+
 //TODO: Not super happy with the way this is set up. It's a little convoluted.
 void
 calc_max_width(){
@@ -924,6 +941,7 @@ calc_max_width(){
     }
 }
 
+
 void generate_new_specs(){
     char buf[4099];
     int rc;
@@ -952,6 +970,7 @@ void generate_new_specs(){
     }
 }
 
+
 void 
 calculate_writeback(struct atom * a) {
     // Calculate writeback handles %n specifiers traversing right to left summing up the field widths
@@ -973,6 +992,7 @@ calculate_writeback(struct atom * a) {
         fprintf(stderr, "Error: a->val.c_intp is NULL\n");
     }
 }
+
 
 void
 print_something_already(){
@@ -1019,6 +1039,7 @@ print_something_already(){
         a = a->down;
     }
 }
+
 
 void
 _cprintf( FILE *stream, const char *fmt, va_list *args ){
@@ -1111,6 +1132,7 @@ _cprintf( FILE *stream, const char *fmt, va_list *args ){
     }
 }
 
+
 //Callback for exit() to free memory
 void exit_nice(void){
     if( is_initialized == true) {
@@ -1118,6 +1140,7 @@ void exit_nice(void){
     }
     exit(0);
 }
+
 
 void
 cprintf( const char *fmt, ... ){
@@ -1127,6 +1150,7 @@ cprintf( const char *fmt, ... ){
     va_end(args);
 }
 
+
 void
 cfprintf( FILE *stream, const char *fmt, ... ){
     va_list args;
@@ -1134,6 +1158,7 @@ cfprintf( FILE *stream, const char *fmt, ... ){
     _cprintf( stream, fmt, &args );
     va_end(args);
 }
+
 
 void
 cvprintf( const char *fmt, va_list args ){
@@ -1143,6 +1168,7 @@ cvprintf( const char *fmt, va_list args ){
     va_end(args2);
 }
 
+
 void
 cvfprintf( FILE *stream, const char *fmt, va_list args ){
     va_list args2;
@@ -1151,6 +1177,7 @@ cvfprintf( FILE *stream, const char *fmt, va_list args ){
     va_end(args2);
 }
 
+
 void
 cflush(){
     if( is_initialized != false ){
@@ -1158,9 +1185,8 @@ cflush(){
             generate_new_specs();
             print_something_already();
             free_graph();
-            //cprintf_error("Error in cflush: state is null.", EXIT_FAILURE);
+            teardown();
     }
-    //TODO: Error check these.
 
     state = NULL; //Think this is already done but can't hurt.
 }
