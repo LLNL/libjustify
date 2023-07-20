@@ -11,8 +11,8 @@ Installation is as simple as:
 ```
 git clone https://github.com/LLNL/libjustify.git
 mkdir build && cd build
-cmake ..
-cmake --build .
+cmake ../src/
+make
 ```
 ---
 ### License

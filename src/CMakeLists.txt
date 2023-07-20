@@ -3,13 +3,34 @@
 #
 # SPDX-License-Identifier: MIT
 
+cmake_policy(SET CMP0048 NEW)
+
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+
+project(libjustify VERSION "0.1.0" LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+option(BUILD_TESTS               "Build tests"                            ON)
+option(VERBOSE                   "Verbose output"                         OFF)
+
+
+# Generate tests
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+
 set(SOURCES cprintf.c)
 
 add_library(cprintf SHARED ${SOURCES})
 
 target_link_libraries(cprintf PUBLIC ${CMAKE_DL_LIBS})
 
-target_include_directories(cprintf PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(cprintf PUBLIC ${CMAKE_SOURCE_DIR})
 
 set_target_properties(cprintf PROPERTIES
-                      LIBRARY_OUTPUT_DIRECTORY ../libjustify/)
+                     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/libjustify/)

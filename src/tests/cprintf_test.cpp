@@ -118,6 +118,7 @@ TEST_F(Strings_Two_lines, Test3) {
 class Test_Two_line_Integer_and_Float : public OutputTest {};
 
 TEST_F(Test_Two_line_Integer_and_Float, Test4) {
+    printtestHeader(4);
     cfprintf(stdout, "%d %d %d\n", 1, 2, 3);
     cfprintf(stdout, "%f %f %e\n", 3.14159, 1.618033, 299792458.0);
     cflush();
@@ -154,7 +155,7 @@ void print_children(unsigned int i) {
 class TestTopology : public OutputTest {};
 
 TEST_F(TestTopology, Test5) {
-    printtestHeader(4);
+    printtestHeader(5);
     const char *hostname = "quartz1234";
     int num_sockets = 2;
     int num_cores_per_socket = 18;
@@ -180,7 +181,6 @@ TEST_F(TestTopology, Test5) {
         cfprintf(stdout, "%-s: %s\n", "  Hyperthreading", "Yes");
     }
 
-    
     cfprintf(stdout, "\n");
     cfprintf(stdout, "%-s: %d\n", "Total Num of Cores", total_cores);
     cfprintf(stdout, "%-s: %d\n", "Total Num of Threads", total_Threads);

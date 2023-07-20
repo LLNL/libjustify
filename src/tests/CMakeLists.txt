@@ -16,11 +16,16 @@ FetchContent_MakeAvailable(googletest)
 add_library(GTest::GTest INTERFACE IMPORTED)
 target_link_libraries(GTest::GTest INTERFACE gtest_main)
 
+
+
 add_executable(cprintf_test cprintf_test.cpp)
 
 target_link_libraries(cprintf_test
  PRIVATE
   GTest::GTest
   cprintf)
+
+set_target_properties(cprintf_test PROPERTIES
+                      LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/gtest/)
 
 add_test(cprintf_gtests cprintf_test)
