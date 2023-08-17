@@ -149,10 +149,12 @@ void update_corners(struct atom* a, struct atom** top_left, struct atom** top_ri
 
 static struct State *state = NULL;
 static bool is_initialized = false;
+static bool do_tabulate    = true;
 
 void
 setup(FILE *stream){
     static bool callback_registered = false;
+    do_tabulate = true;
     state = calloc(1, sizeof(struct State));
     if (NULL == state) {
         cprintf_error("Memory allocation failed.", EXIT_FAILURE);
@@ -522,9 +524,13 @@ _free_graph( struct atom *a ){
     if( a->left ){
         a->left->right = NULL;
     }
-
-    free( a->original_specification );
-    free( a->new_specification );
+    if (do_tabulate == false ) {
+      // point to the some thing 
+      free( a->original_specification );
+    } else {
+      free( a->original_specification );
+      free( a->new_specification );
+    }
     free( a->flags );
     free( a->field_width );
     free( a->precision );
@@ -695,13 +701,23 @@ parse_length_modifier( const char *p ){
 }
 
 
+/*ptrdiff_t
+parse_conversion_specifier( const char *p){
+    char * cp = p; 
+    char * con = strtok(cp, "%");
+
+    fprintf(stderr, "ConSize: %s", con); 
+    size_t cs  = strlen(con);
+    return cs;
+}*/
+
 ptrdiff_t
 parse_conversion_specifier( const char *p ){
     // conversion specifiers are:
-    // d, i, o, u, x, X, e, E, f, F, g, G, a, A, c, C, s, S, p, n, m, %
-    size_t d = strspn( p, "diouxXeEfFgGaAcCsSpnm%" );
+    // d, i, o, u, x, X, e, E, f, F, g, G, a, A, c, C, s, S, p, n, m
+    size_t d = strspn( p, "diouxXeEfFgGaAcCsSpnm" );
     // This one is mandatory and there can only be one.
-    if ( d != 1) {
+    if ( d == 0 ) {
         cprintf_error("Error in parse_conversion_specifier: Invalid conversion specifier.", EXIT_FAILURE);
     }
     return d;
@@ -1008,8 +1024,11 @@ print_something_already(){
         c = a;
         while ( NULL != c) {
             if( c->is_conversion_specification ){
+                if( do_tabulate == false ) { // TODO: This is so hacky it's not even funny
+                    c->new_specification = c->original_specification;
+                }
                 switch( c->type ){
-                    case C_INT_PTR:             calculate_writeback(c);                                             break;
+                    case C_INT_PTR:             calculate_writeback(c);                                                    break;
                     case C_INT:                 fprintf( state->dest, c->new_specification, c->val.c_int );                break;
                     case C_WINT_T:              fprintf( state->dest, c->new_specification, c->val.c_wint_t );             break;
                     case C_CHARX:               fprintf( state->dest, c->new_specification, c->val.c_charx );              break;
@@ -1047,6 +1066,7 @@ _cprintf( FILE *stream, const char *fmt, va_list *args ){
     const char *p = fmt, *q = fmt;
     ptrdiff_t d = 0;
     ptrdiff_t span;
+    bool ptf = true;
     //static bool exit_callback_constructed = false;
 
     if(fileno(stream) == -1) {
@@ -1080,6 +1100,10 @@ _cprintf( FILE *stream, const char *fmt, va_list *args ){
         d = strcspn( p, "%" );
         q = p;
         if( d == 0 ){
+            if ( ptf != true ) {
+                do_tabulate = false;
+            }
+            ptf = false;
             // We've found a converstion specification.
             a = create_atom( is_newline );
 
@@ -1122,6 +1146,7 @@ _cprintf( FILE *stream, const char *fmt, va_list *args ){
             p = q;
         }else{
             // We've found some normal text.
+            ptf = true;
             a = create_atom( is_newline );
             a->is_conversion_specification = false;
             archive( q, d, &(a->ordinary_text) );
@@ -1181,11 +1206,13 @@ cvfprintf( FILE *stream, const char *fmt, va_list args ){
 void
 cflush(){
     if( is_initialized != false ){
+      if(do_tabulate != false){
             calc_max_width();
             generate_new_specs();
-            print_something_already();
-            free_graph();
-            teardown();
+      }
+        print_something_already();
+        free_graph();
+        teardown();
     }
 
     state = NULL; //Think this is already done but can't hurt.
