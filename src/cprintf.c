@@ -700,17 +700,6 @@ parse_length_modifier( const char *p ){
     return strspn( p, "hlLqjzt" );
 }
 
-
-/*ptrdiff_t
-parse_conversion_specifier( const char *p){
-    char * cp = p; 
-    char * con = strtok(cp, "%");
-
-    fprintf(stderr, "ConSize: %s", con); 
-    size_t cs  = strlen(con);
-    return cs;
-}*/
-
 ptrdiff_t
 parse_conversion_specifier( const char *p ){
     // conversion specifiers are:
@@ -1189,7 +1178,6 @@ void exit_nice(void){
     if( is_initialized == true) {
         cflush();
     }
-    assert(0);
     exit(0);
 }
 
