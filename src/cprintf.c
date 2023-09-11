@@ -779,8 +779,8 @@ calc_actual_width( struct atom *a ){
 */
     if(a->is_dummy) return; //Return early if this is a dummy atom. TODO: This isn't great fix it.
 
-    static char buf[4097];
-
+    static char buf[4097]; 
+    
     if( is(a->conversion_specifier, "c") ){
         if( is( a->length_modifier, "" ) ){
             a->type = C_INT;
@@ -793,7 +793,30 @@ calc_actual_width( struct atom *a ){
         }else{
             cprintf_error("Error in calc_actual_width: Invalid length modifier for \%c", EXIT_FAILURE);
         }
-    }else if( is(a->conversion_specifier, "s") ){
+    }
+
+    else if (is(a->conversion_specifier, "s")) {
+        if (is(a->length_modifier, "")) {
+            a->type = C_CHARX;
+            a->val.c_charx = strdup(va_arg(*(a->pargs), char*));
+            if (!a->val.c_charx) {
+                cprintf_error("Error in calc_actual_width: Memory allocation failed", EXIT_FAILURE);
+        }
+        snprintf(buf, 4096, a->original_specification, a->val.c_charx);
+    } else if (is(a->length_modifier, "l")) {
+        a->type = C_WCHAR_TX;
+        a->val.c_wchar_tx = wcsdup(va_arg(*(a->pargs), wchar_t*));
+        if (!a->val.c_wchar_tx) {
+            // Handle memory allocation failure
+            cprintf_error("Error in calc_actual_width: Memory allocation failed", EXIT_FAILURE);
+        }
+        snprintf(buf, 4096, a->original_specification, a->val.c_wchar_tx);
+    } else {
+            cprintf_error("Error in calc_actual_width: Invalid length modifier for %s", EXIT_FAILURE);
+        }
+    }
+
+/*    else if( is(a->conversion_specifier, "s") ){
         if( is( a->length_modifier, "" ) ){
             a->type = C_CHARX;
             a->val.c_charx = va_arg( *(a->pargs), char* );
@@ -805,7 +828,10 @@ calc_actual_width( struct atom *a ){
         }else{
             cprintf_error("Error in calc_actual_width: Invalid length modifier for \%s", EXIT_FAILURE);
         }
-    }else if( is(a->conversion_specifier, "d")
+    }
+*/
+
+    else if( is(a->conversion_specifier, "d")
           ||  is(a->conversion_specifier, "i") ){
         if( is( a->length_modifier, "hh" )
         ||  is( a->length_modifier, "h" )
@@ -1163,6 +1189,7 @@ void exit_nice(void){
     if( is_initialized == true) {
         cflush();
     }
+    assert(0);
     exit(0);
 }
 
@@ -1215,5 +1242,5 @@ cflush(){
         teardown();
     }
 
-    state = NULL; //Think this is already done but can't hurt.
+    //state = NULL; //Think this is already done but can't hurt.
 }
