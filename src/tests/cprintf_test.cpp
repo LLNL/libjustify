@@ -137,7 +137,7 @@ void print_children(unsigned int i) {
     unsigned ARR_SIZE = 32;
 
     if( i == 0 ) {
-        cprintf("%s %s %s %s\n", "Threads", "HWThread", "Core", "Socket");
+        cprintf("%s %s %s %s\n", "Thread", "HWThread", "Core", "Socket");
     }
 
     int socket = (i > ARR_SIZE/2) % 2;
