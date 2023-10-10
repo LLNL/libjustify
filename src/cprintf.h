@@ -12,13 +12,13 @@
 extern "C" {
 #endif
 
-void cprintf( const char* fmt, ... );
-void cfprintf( FILE *stream, const char* fmt, ... );
+void cprintf(const char *fmt, ...);
+void cfprintf(FILE *stream, const char *fmt, ...);
 
-void cvprintf( const char* fmt, va_list args );
-void cvfprintf( FILE *stream, const char* fmt, va_list args );
+void cvprintf(const char *fmt, va_list args);
+void cvfprintf(FILE *stream, const char *fmt, va_list args);
 void dump_graph();
-void cflush( void );
+void cflush(void);
 #endif
 
 #ifdef __cplusplus
