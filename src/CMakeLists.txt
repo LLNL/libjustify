@@ -14,16 +14,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
 
-option(BUILD_TESTS               "Build tests"                            ON)
-option(VERBOSE                   "Verbose output"                         OFF)
-
+option(BUILD_TESTS "Build tests"    ON)
+option(VERBOSE     "Verbose output" OFF)
 
 # Generate tests
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
-
 
 set(SOURCES cprintf.c)
 
@@ -34,4 +32,4 @@ target_link_libraries(cprintf PUBLIC ${CMAKE_DL_LIBS})
 target_include_directories(cprintf PUBLIC ${CMAKE_SOURCE_DIR})
 
 set_target_properties(cprintf PROPERTIES
-                     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/libjustify/)
+                      LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/)

@@ -9,8 +9,7 @@ message(STATUS "Downloading & Configuring Google Test (This may take a minute)..
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-
-# Fetchs and builds from source, doesn't work on 
+# Fetchs and builds from source, doesn't work on
 # Systems with no git access
 include(GoogleTest)
 
