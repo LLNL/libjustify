@@ -14,14 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
 
-option(BUILD_TESTS "Build tests"    ON)
 option(VERBOSE     "Verbose output" OFF)
-
-# Generate tests
-if(BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
 
 set(SOURCES cprintf.c)
 
