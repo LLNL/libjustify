@@ -145,7 +145,6 @@ TEST_F(Test_Two_line_Integer_and_Float, Test4)
 
 }
 
-
 void print_children(unsigned int i)
 {
     unsigned ARR_SIZE = 32;

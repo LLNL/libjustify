@@ -10,9 +10,9 @@
 #include <stdlib.h>
 #include "cprintf.h"
 
-void
-test_cprintf(void) {
-        /*printf("fprintf():\n");
+void test_cprintf(void)
+{
+    /*printf("fprintf():\n");
     fprintf( stderr, "%d %d %d\n", 1, 2, 3);
     fprintf( stderr, "%d %d %d\n", 10, 20, 30);
     fprintf( stderr, "%d %d %d\n", 100, 200, 300);
@@ -72,49 +72,55 @@ test_cprintf(void) {
     cflush();
     printf("n = %d\n", n);
     printf("s = %d\n", s);
-*/
+    */
 }
 
-
-void print_children(unsigned int i) {
+void print_children(unsigned int i)
+{
     unsigned ARR_SIZE = 32;
 
-    if( i == 0 ) {
+    if (i == 0)
+    {
         cprintf("%s %s %s %s\n", "Thread", "HWThread", "Core", "Socket");
     }
 
-    int socket = (i > ARR_SIZE/2) % 2;
+    int socket = (i > ARR_SIZE / 2) % 2;
     cfprintf(stdout, "%d %d %d %d\n", i, i, i, socket);
 
-    i = i+1;
-    if (i < ARR_SIZE) {
+    i = i + 1;
+    if (i < ARR_SIZE)
+    {
         print_children(i);
-    } else {
+    }
+    else
+    {
         cflush();
     }
-    
+
 }
 
-void print_power(int SIZE) {
-
+void print_power(int SIZE)
+{
     //cfprintf(stdout, "%-d | %f |\n", i, 3.14f);
     //cfprintf(stdout, "_AMD_GPU_CLOCKS Host: %s, Socket: %d,")
 
-    for ( int i = 0; i<SIZE; i++)
+    for (int i = 0; i < SIZE; i++)
     {
-        if( i == 0 ) {
-            cfprintf(stdout,"%s | %s | \n", "Core", "Energy (J)");
-        } else {
-            cfprintf(stdout, "Core: %i | %-s %f |\n", i*100, "Socket:", 3.14f);
+        if (i == 0)
+        {
+            cfprintf(stdout, "%s | %s | \n", "Core", "Energy (J)");
+        }
+        else
+        {
+            cfprintf(stdout, "Core: %i | %-s %f |\n", i * 100, "Socket:", 3.14f);
         }
     }
     dump_graph();
     cflush();
 }
 
-
-void
-variorum_print_topology(void) {
+void variorum_print_topology(void)
+{
     char *hostname = "quartz1234";
     int num_sockets = 2;
     int num_cores_per_socket = 18;
@@ -129,7 +135,7 @@ variorum_print_topology(void) {
     cfprintf(stdout, "  %-s: %-d\n", "Num Sockets", num_sockets);
     cfprintf(stdout, "  %-s: %-d\n", "Num Cores per Socket", num_cores_per_socket);
 
-    if ( threads_per_core == 1)
+    if (threads_per_core == 1)
     {
         cfprintf(stdout, "  %-s: %-s\n", "  Hyperthreading", "No");
     }
@@ -149,7 +155,8 @@ variorum_print_topology(void) {
     //fprintf(stdout, "Thread HWThread Core Socket\n");
 }
 
-void test_space_before_format_string(void){
+void test_space_before_format_string(void)
+{
     cprintf("  %d %d %d\n", 100, 200, 300);
     cprintf("  %d %d %d\n", 100, 200, 300);
     cprintf("  %d %d %d\n", 100, 200, 300);
@@ -164,13 +171,15 @@ void test_space_before_format_string(void){
     cflush();
 }
 
-void test_hyperthreading(void){
+void test_hyperthreading(void)
+{
     cfprintf(stdout, "  %-s %s\n", "Hyperthreading:", "Enabled");
     cfprintf(stdout, "  %-s %-d\n", "Num Thread Per Core: ", 2);
     cflush();
 }
 
-int main(){
+int main()
+{
     //variorum_print_topology();
     //test_space_before_format_string();
     //test_hyperthreading();
