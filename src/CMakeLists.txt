@@ -26,3 +26,12 @@ target_include_directories(cprintf PUBLIC ${CMAKE_SOURCE_DIR})
 
 set_target_properties(cprintf PROPERTIES
                       LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/)
+
+install(TARGETS cprintf
+        EXPORT  cprintf
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION lib)
+
+install(FILES cprintf.h
+        DESTINATION include)
