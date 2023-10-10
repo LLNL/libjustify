@@ -150,7 +150,7 @@ The stored data structure is then traversed by  [`print_something_already()`][#p
 
 **SPEC:**`static voidcalc_actual_width( struct atom *a )`
 
-`calc_actual_width` identifies conversion specifiers storing the respective width after applying any appropriate flags, width modifiers, legths, etc. finally storing the atom type `a->type` and its passed value into `a->val`.
+`calc_actual_width` identifies conversion specifiers storing the respective width after applying any appropriate flags, width modifiers, lengths, etc. finally storing the atom type `a->type` and its passed value into `a->val`.
 
 ---
 #### `_extend_dummy_rows`
@@ -203,7 +203,7 @@ Upon segmentation `_cprintf()` generates a corresponding atom that is processed 
 
 In handling conversion specifiers, `_cprintf()` ensures all elements - flags, field width, precision, length modifier, and type - are parsed and stored within the newly minted atom.
 
-**In summary: `_cprintf()` analyses a format string and constructs a unique row of atoms.**
+**In summary: `_cprintf()` analyzes a format string and constructs a unique row of atoms.**
 
 ---
 #### print_something_already()

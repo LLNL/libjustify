@@ -349,7 +349,7 @@ _extend_dummy_rows(size_t size)
 
     if (NULL == state || false == is_initialized)
     {
-        cprintf_error("_extend_dummy_rows: Attempted to extend with an unititialized graph.",
+        cprintf_error("_extend_dummy_rows: Attempted to extend with an uninitialized graph.",
                       EXIT_FAILURE);
     }
 
@@ -624,7 +624,7 @@ free_graph()
 }
 
 //NOTE: It's probably better to build the first row of true atoms and
-//      Then create the dummy rows. Speed up will be proprotional to
+//      Then create the dummy rows. Speed up will be proportional to
 //      the number of Atoms in the first row.
 struct atom *
 _handle_origin_null(struct atom *a, int extend_by)
@@ -1375,7 +1375,7 @@ _cprintf(FILE *stream, const char *fmt, va_list *args)
                 do_tabulate = false;
             }
             ptf = false;
-            // We've found a converstion specification.
+            // We've found a conversion specification.
             a = create_atom(is_newline);
 
             if (a == NULL)
