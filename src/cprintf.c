@@ -22,22 +22,22 @@
 // are promoted to int when accessed by va_arg().
 typedef union
 {
-    int                 c_int;
-    wint_t              c_wint_t;
+    int                c_int;
+    wint_t             c_wint_t;
     char               *c_charx;
     wchar_t            *c_wchar_tx;
-    long                c_long;
-    long long           c_long_long;
-    intmax_t            c_intmax_t;
-    ssize_t             c_ssize_t;
-    ptrdiff_t           c_ptrdiff_t;
-    unsigned int        c_unsigned_int;
-    unsigned long       c_unsigned_long;
-    unsigned long long  c_unsigned_long_long;
-    uintmax_t           c_uintmax_t;
-    size_t              c_size_t;
-    double              c_double;
-    long double         c_long_double;
+    long               c_long;
+    long long          c_long_long;
+    intmax_t           c_intmax_t;
+    ssize_t            c_ssize_t;
+    ptrdiff_t          c_ptrdiff_t;
+    unsigned int       c_unsigned_int;
+    unsigned long      c_unsigned_long;
+    unsigned long long c_unsigned_long_long;
+    uintmax_t          c_uintmax_t;
+    size_t             c_size_t;
+    double             c_double;
+    long double        c_long_double;
     void               *c_voidx;
     int                *c_intp;
 } value;
@@ -149,8 +149,7 @@ void cprintf_warning(char *fmt, ...);
 void setup(FILE *stream);
 void teardown(void);
 void update_corners(struct atom *a, struct atom **top_left,
-                    struct atom **top_right,
-                    struct atom **bot_left, struct atom **bot_right);
+                    struct atom **top_right, struct atom **bot_left, struct atom **bot_right);
 
 static struct State *state = NULL;
 static bool is_initialized = false;
@@ -183,7 +182,6 @@ void setup(FILE *stream)
         callback_registered = true;
     }
 }
-
 
 // Reset the state of the graph, this should be called after the graph is freed.
 void teardown(void)
@@ -247,19 +245,33 @@ void rebuild_state(struct atom *a)
 // TODO: Maybe a search algorithm would be better?
 // NOTE: THIS IS EXPENSIVE AND SHOULDN'T OCCUR.
 void update_corners(struct atom *a, struct atom **top_left,
-                    struct atom **top_right,
-                    struct atom **bot_left, struct atom **bot_right)
+                    struct atom **top_right, struct atom **bot_left, struct atom **bot_right)
 {
     // If atom is NULL or all corners have been found, exit.
-    if (!a || (*top_left && *top_right && *bot_left && *bot_right)) return;
+    if (!a || (*top_left && *top_right && *bot_left && *bot_right))
+    {
+        return;
+    }
 
     // If current atom is a dummy and at the edge, update the respective corner
     if (a->is_dummy)
     {
-        if (!a->up && !a->left && !*top_left) *top_left = a;
-        if (!a->up && !a->right && !*top_right) *top_right = a;
-        if (!a->down && !a->left && !*bot_left) *bot_left = a;
-        if (!a->down && !a->right && !*bot_right) *bot_right = a;
+        if (!a->up && !a->left && !*top_left)
+        {
+            *top_left = a;
+        }
+        if (!a->up && !a->right && !*top_right)
+        {
+            *top_right = a;
+        }
+        if (!a->down && !a->left && !*bot_left)
+        {
+            *bot_left = a;
+        }
+        if (!a->down && !a->right && !*bot_right)
+        {
+            *bot_right = a;
+        }
     }
 
     // Recursive calls
@@ -290,8 +302,8 @@ struct atom *top_left_finder_safe(void)
             state->top_left->down == state->origin)
         {
             cprintf_warning("Error in top_left_finder_safe: %s was located \
-                          but does not appear to be a dummy atom or an origin\
-                          Configuration will be rebuilt.", "top_left");
+                            but does not appear to be a dummy atom or an origin.\
+                            Configuration will be rebuilt.", "top_left");
             rebuild_state(0);
         }
         rv = state->top_left;
@@ -382,7 +394,7 @@ void _extend_dummy_rows(size_t size)
 
         _extend_dummy_rows(--size);
     }
-};
+}
 
 void dump_graph(void)
 {
@@ -529,8 +541,8 @@ void _free_graph(struct atom *a)
     }
     else if (NULL == state->top_left)
     {
-        cprintf_warning("Attempted to free a graph with a NULL top_left state, this is likely a \
-                         bug\n. We will locate origin if it exists and try to free.");
+        cprintf_warning("Attempted to free a graph with a NULL top_left state, this is likely \
+                        a bug\n. We will locate origin if it exists and try to free.");
         top_left_finder_safe(); // Fixes state->top_left if it got broken.
     }
     if (NULL == state->origin)
@@ -868,6 +880,7 @@ static void calc_actual_width(struct atom *a)
                           EXIT_FAILURE);
         }
     }
+
     else if (is(a->conversion_specifier, "s"))
     {
         if (is(a->length_modifier, ""))
@@ -915,12 +928,10 @@ static void calc_actual_width(struct atom *a)
         }
     */
 
-    else if (is(a->conversion_specifier, "d")
-             ||  is(a->conversion_specifier, "i"))
+    else if (is(a->conversion_specifier, "d") || is(a->conversion_specifier, "i"))
     {
-        if (is(a->length_modifier, "hh")
-            ||  is(a->length_modifier, "h")
-            ||  is(a->length_modifier, ""))
+        if (is(a->length_modifier, "hh") || is(a->length_modifier, "h") ||
+            is(a->length_modifier, ""))
         {
             a->type = C_INT;
             a->val.c_int = va_arg(*(a->pargs), int);
@@ -962,13 +973,10 @@ static void calc_actual_width(struct atom *a)
                           EXIT_FAILURE);
         }
     }
-    else if (is(a->conversion_specifier, "o")
-             ||  is(a->conversion_specifier, "x")
-             ||  is(a->conversion_specifier, "X")
-             ||  is(a->conversion_specifier, "u"))
+    else if (is(a->conversion_specifier, "o") || is(a->conversion_specifier, "x") ||
+             is(a->conversion_specifier, "X") || is(a->conversion_specifier, "u"))
     {
-        if (is(a->length_modifier, "hh")
-            ||  is(a->length_modifier, "h"))
+        if (is(a->length_modifier, "hh") || is(a->length_modifier, "h"))
         {
             a->type = C_INT;
             a->val.c_int = va_arg(*(a->pargs), int);
@@ -1016,17 +1024,12 @@ static void calc_actual_width(struct atom *a)
                           EXIT_FAILURE);
         }
     }
-    else if (is(a->conversion_specifier, "f")
-             ||  is(a->conversion_specifier, "F")
-             ||  is(a->conversion_specifier, "e")
-             ||  is(a->conversion_specifier, "E")
-             ||  is(a->conversion_specifier, "a")
-             ||  is(a->conversion_specifier, "A")
-             ||  is(a->conversion_specifier, "g")
-             ||  is(a->conversion_specifier, "G"))
+    else if (is(a->conversion_specifier, "f") || is(a->conversion_specifier, "F") ||
+             is(a->conversion_specifier, "e") || is(a->conversion_specifier, "E") ||
+             is(a->conversion_specifier, "a") || is(a->conversion_specifier, "A") ||
+             is(a->conversion_specifier, "g") || is(a->conversion_specifier, "G"))
     {
-        if (is(a->length_modifier, "l")
-            ||  is(a->length_modifier, ""))
+        if (is(a->length_modifier, "l") || is(a->length_modifier, ""))
         {
             a->type = C_DOUBLE;
             a->val.c_double = va_arg(*(a->pargs), double);
@@ -1109,7 +1112,7 @@ void calc_max_width()
         {
             citer = aiter;
             while (citer->is_dummy == false &&
-                   NULL != citer->down)  //last is a sanity check
+                   NULL != citer->down)  // last is a sanity check
             {
                 // find max field width
                 if (citer->original_field_width > w)
@@ -1119,7 +1122,7 @@ void calc_max_width()
                 citer = citer->down;
             }
             citer = aiter;
-            while (citer->is_dummy == false)  //makes clean up easier
+            while (citer->is_dummy == false)  // makes clean up easier
             {
                 // set max field width
                 citer->new_field_width = w;
@@ -1147,12 +1150,8 @@ void generate_new_specs()
         {
             if (c->is_conversion_specification)
             {
-                rc = snprintf(buf, 4099, "%%%s%zu%s%s%s",
-                              c->flags,
-                              c->new_field_width,
-                              c->precision,
-                              c->length_modifier,
-                              c->conversion_specifier);
+                rc = snprintf(buf, 4099, "%%%s%zu%s%s%s", c->flags, c->new_field_width,
+                              c->precision, c->length_modifier, c->conversion_specifier);
                 if (rc > 4099)
                 {
                     cprintf_error("Error in generate_new_specs: snprintf truncated.", EXIT_FAILURE);
