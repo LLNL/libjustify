@@ -24,3 +24,5 @@ jobs:
         VERBOSE=1 make -j
         # install
         make -j install
+        # test
+        env CTEST_OUTPUT_ON_FAILURE=1 make test
