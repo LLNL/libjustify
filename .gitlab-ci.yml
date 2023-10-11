@@ -1,20 +1,16 @@
-image: gcc:latest
-
 stages:
   - build
-  - test
 
 before_script:
-  - mkdir build
-  - cd build
-  - cmake ../src/
 
-build_job:
+build-quartz:
+  tags:
+    - shell
+    - quartz
   stage: build
   script:
-    - make
-
-test_job:
-  stage: test
-  script:
-    - make test
+    - mkdir build-libjustify && install-libjustify
+    - cd build-libjustify
+    - cmake -DCMAKE_INSTALL_PREFIX=../install-libjustify ../src/
+    - make VERBOSE=1
+    - make install
