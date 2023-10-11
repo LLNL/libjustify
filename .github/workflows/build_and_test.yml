@@ -12,12 +12,13 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Compile check
       run: |
         mkdir build install
         cd build
+        cmake --version
         cmake -DCMAKE_INSTALL_PREFIX=../install ../src/
         # build
         VERBOSE=1 make -j
