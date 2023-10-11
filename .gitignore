@@ -1,9 +1,6 @@
-*tmux
 .*.swp
-.nfs*
 *.o
 *.a
 *.so
 *.core
 example
-
