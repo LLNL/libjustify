@@ -14,3 +14,4 @@ build-quartz:
     - cmake -DCMAKE_INSTALL_PREFIX=../install-libjustify ../src/
     - make VERBOSE=1
     - make install
+    - env CTEST_OUTPUT_ON_FAILURE=1 make test
