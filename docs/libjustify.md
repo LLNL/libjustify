@@ -4,7 +4,7 @@
 
 ## Description
 
-Libjustify is a simple library that wraps the printf() family of functions and offers a new family: `cprintf()` that emulates their behavior while automatically justifying and formatting output to create a table.
+Libjustify is a simple library that wraps the `printf()` family of functions and offers a new family: `cprintf()` that emulates their behavior while automatically justifying and formatting output to create a table.
 
 
 ---
@@ -112,11 +112,10 @@ Newlines will set bidirectional links with the dummy root and upwards with the l
 ---
 ## Algorithm
 
-libjustify's algorithm can be broken down into 3 major parts:
+Libjustify's algorithm can be broken down into 3 major parts:
 
 #### 1) Parsing format strings and creating atoms.
-Every time a format string is given to any variant of `cprintf()` it is handled by an internal
-function: `_cprintf()` [`_cprintf()`](#_cprintf()).  `_cprintf()` adds a row of atoms that act as an internal representation of that format string. See [Atoms](#atoms), [Dummy Rows & Atoms. Creating dummies & inserting the first atom](#Dummy%20Rows%20&%20Atoms.%20Creating%20dummies%20&%20inserting%20the%20first%20atom) and [Inserting more atoms](#inserting-more-atoms) for details on atoms and the creation and insertion of atoms.
+Every time a format string is given to any variant of `cprintf()` it is handled by an internal function: `_cprintf()` [`_cprintf()`](#_cprintf()). `_cprintf()` adds a row of atoms that act as an internal representation of that format string. See [Atoms](#atoms), [Dummy Rows & Atoms. Creating dummies & inserting the first atom](#Dummy%20Rows%20&%20Atoms.%20Creating%20dummies%20&%20inserting%20the%20first%20atom) and [Inserting more atoms](#inserting-more-atoms) for details on atoms and the creation and insertion of atoms.
 
 ---
 #### 2) Calculating the widest atom in every column
@@ -124,17 +123,18 @@ Calling [`cflush()`][#cflush()] initiates a tabulation and output sequence. This
 
 ---
 #### 3) Generating new field widths
-Calling [`cflush()`][#cflush()] initiates a tabulation and output sequence. The second step in this sequence calls  [`generate_new_specs()`][#generate_new_specs()] which uses the previously stored values for the minimum field width and creates a new format string specification based on the stored flags, width, etc.
+Calling [`cflush()`][#cflush()] initiates a tabulation and output sequence. The second step in this sequence calls [`generate_new_specs()`][#generate_new_specs()] which uses the previously stored values for the minimum field width and creates a new format string specification based on the stored flags, width, etc.
 
 ---
 #### 4) Output
 
-The stored data structure is then traversed by  [`print_something_already()`][#print_something_already()] which will traverse down each column printing them appropriately based on their new specification (found in the last step)
+The stored data structure is then traversed by [`print_something_already()`][#print_something_already()] which will traverse down each column printing them appropriately based on their new specification (found in the last step)
 
 ---
 ## Reference
 
 #### dummy_rows_ds
+
 `dummy_rows_ds` contains automatically set pointers to corners of the upper and lower dummy rows to ease traversal and extension of the dummy rows .
 
 | Type    | Name | Description                                                 |
@@ -148,23 +148,23 @@ The stored data structure is then traversed by  [`print_something_already()`][#p
 
 #### calc_actual_width
 
-**SPEC:**`static voidcalc_actual_width( struct atom *a )`
+**SPEC:** `static void calc_actual_width(struct atom *a)`
 
 `calc_actual_width` identifies conversion specifiers storing the respective width after applying any appropriate flags, width modifiers, lengths, etc. finally storing the atom type `a->type` and its passed value into `a->val`.
 
 ---
 #### `_extend_dummy_rows`
 
-**SPEC:** `void calc_max_width(size_t size);`
+**SPEC:** `void calc_max_width(size_t size)`
 
 `_extend_dummy_rows` extends the upper and lower dummy rows by a given `size` linking upper and lower dummy rows to each other [Inserting and extending](#Inserting%20and%20extending) and in the process automatically updating `dummy_rows`.
 
 ---
 #### calc_max_width()
 
-**SPEC:** `void calc_max_width();`
+**SPEC:** `void calc_max_width()`
 
-`calc_max_width()` calculates the widest field width within each column and stores it's width within all the other atoms in that column.
+`calc_max_width()` calculates the widest field width within each column and stores its width within all the other atoms in that column.
 
 Details:
 `calc_max_width()` starting at the [Dummy Rows. Creating dummies & inserting the first atom](#dummy-rows-creating-dummies-inserting-the-first-atom), walks down each column twice finding the width of the largest atom in that column (`atom->original_field_width`) before walking down the column again storing the largest width found in `atom->new_field_width` .
@@ -172,7 +172,7 @@ Details:
 ---
 #### generate_new_specs()
 
-**SPEC:** `void generate_new_specs();`
+**SPEC:** `void generate_new_specs()`
 
 `generate_new_specs()` generates new format strings for each atom that contain the calculated minimum width fields for each column (computed by [`calc_max_width()`](#calc_max_width()) writing them to `atom->new_specification`.
 
@@ -192,7 +192,7 @@ rc = snprintf(buf, 4099, "%%%s%zu%s%s%s",
 ---
 #### \_cprintf()
 
-**SPEC:** `void _cprintf( FILE *stream, const char *fmt, va_list *args );`
+**SPEC:** `void _cprintf(FILE *stream, const char *fmt, va_list *args)`
 
 The `_cprintf()` function sequentially processes format strings segmenting them by identifying 3 types:
 1. Newlines
@@ -208,15 +208,14 @@ In handling conversion specifiers, `_cprintf()` ensures all elements - flags, fi
 ---
 #### print_something_already()
 
-**SPEC:**`void print_something_already()`
+**SPEC:** `void print_something_already()`
 
-`print_something_already()`
-traverses down each column printing each atoms new calculated specification to the output buffer.
+`print_something_already()` traverses down each column printing each atoms new calculated specification to the output buffer.
 
 ---
 #### cflush()
 
-**SPEC:** `void cflush( );`
+**SPEC:** `void cflush()`
 
 The `cflush()` function initiates a routine that [calc_max_width() ](#calc_max_width) before generating and storing new justified specifications within every atom. The newly modified structure is then printed to the specified output stream and the entire data structure is freed.
 
@@ -224,9 +223,11 @@ The `cflush()` function initiates a routine that [calc_max_width() ](#calc_max_w
 
 ##### Internal Snippet:
 ```C
-void
-cflush(){
-    if( NULL != origin){ //Chucks if the data structure is empty
+void cflush()
+{
+    if (NULL != origin)
+    {
+        // Checks if the data structure is empty
 	    calc_max_width();
 	    generate_new_specs();
 	    print_something_already();
@@ -261,9 +262,10 @@ Flushed
 000128 |    2 | Lorem ipsum dolor | sit amet
 c0ffee | 3.14 |               100 |        x
 ```
+
 ---
 #### `_make_dummy()`
 
-**SPEC:**`struct atom *_make_dummy( void )`
+**SPEC:** `struct atom *_make_dummy(void)`
 
 `_make_dummy()` creates and returns an entirely empty dummy atom.
