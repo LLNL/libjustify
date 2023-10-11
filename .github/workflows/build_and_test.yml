@@ -16,7 +16,7 @@ jobs:
 
     - name: Compile check
       run: |
-        mkdir build && install
+        mkdir build install
         cd build
         cmake -DCMAKE_INSTALL_PREFIX=../install ../src/
         # build
