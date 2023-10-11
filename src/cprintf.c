@@ -66,7 +66,7 @@ typedef enum
 
 struct atom
 {
-    // Atoms should be allocated with calloc().  However, the value of
+    // Atoms should be allocated with calloc(). However, the value of
     // NULL is implementation-dependent, so be sure any new pointers
     // added here are explicitly set to NULL in create_atom() and freed
     // in free_graph();
@@ -97,8 +97,8 @@ struct atom
     struct atom *down;
 };
 
-
-struct State   //Stores the state of the graph.
+// Stores the state of the graph.
+struct State
 {
     bool empty_graph;
     struct atom *last_atom_on_last_line;
@@ -116,7 +116,7 @@ void free_graph();
 
 struct atom *create_atom(bool is_newline);
 
-//Enumerated methods to handle different cases of atom creation.
+// Enumerated methods to handle different cases of atom creation.
 struct atom *_handle_origin_null(struct atom *a, int extend_by);
 struct atom *_handle_new_line(struct atom *a);
 struct atom *_link_normal_atom(struct atom *a, struct atom *curr_lower_dummy,
@@ -124,7 +124,7 @@ struct atom *_link_normal_atom(struct atom *a, struct atom *curr_lower_dummy,
 
 struct atom *top_left_finder_safe(void);
 
-//Enumerate methods to handle dummy rows.
+// Enumerate methods to handle dummy rows.
 void _create_dummy_rows(void);
 struct atom *_make_dummy(void);
 void _extend_dummy_rows(size_t size);
@@ -146,7 +146,6 @@ void exit_nice(void);
 void cprintf_error(char *fmt, ...);
 void cprintf_warning(char *fmt, ...);
 
-
 void setup(FILE *stream);
 void teardown(void);
 void update_corners(struct atom *a, struct atom **top_left,
@@ -157,8 +156,7 @@ static struct State *state = NULL;
 static bool is_initialized = false;
 static bool do_tabulate    = true;
 
-void
-setup(FILE *stream)
+void setup(FILE *stream)
 {
     static bool callback_registered = false;
     do_tabulate = true;
@@ -178,7 +176,7 @@ setup(FILE *stream)
     state->bot_left               = NULL;
     state->bot_right              = NULL;
 
-    //Register the exit call back
+    // Register the exit call back
     if (callback_registered == false)
     {
         atexit(exit_nice);
@@ -188,10 +186,8 @@ setup(FILE *stream)
 
 
 // Reset the state of the graph, this should be called after the graph is freed.
-void
-teardown(void)
+void teardown(void)
 {
-
     is_initialized = false;
     state->top_left = NULL;
     state->bot_left = NULL;
@@ -206,16 +202,14 @@ teardown(void)
 }
 
 // Rebuild the state if something horrible happens.
-void
-rebuild_state(struct atom *a)
+void rebuild_state(struct atom *a)
 {
-
     struct atom *top_left = NULL;
     struct atom *top_right = NULL;
     struct atom *bot_left = NULL;
     struct atom *bot_right = NULL;
 
-    //Grab any corner we can locate
+    // Grab any corner we can locate
     if (state->top_left)
     {
         a = state->top_left;
@@ -278,8 +272,7 @@ void update_corners(struct atom *a, struct atom **top_left,
 // We often start from the top left,
 // The safest way to do this is to verify the state is
 // In a valid configuration and rebuild if it isn't.
-struct atom
-*top_left_finder_safe(void)
+struct atom *top_left_finder_safe(void)
 {
     struct atom *rv = NULL;
     if (NULL == state)
@@ -306,8 +299,7 @@ struct atom
     return rv;
 }
 
-struct atom *
-_make_dummy(void)
+struct atom *_make_dummy(void)
 {
     struct atom *a = calloc(sizeof(struct atom), 1);
 
@@ -340,9 +332,7 @@ _make_dummy(void)
     return a;
 };
 
-
-void
-_extend_dummy_rows(size_t size)
+void _extend_dummy_rows(size_t size)
 {
     struct atom *new_top;
     struct atom *new_bottom;
@@ -360,7 +350,6 @@ _extend_dummy_rows(size_t size)
     }
     else
     {
-
         new_top = _make_dummy();
         new_bottom = _make_dummy();
 
@@ -375,7 +364,6 @@ _extend_dummy_rows(size_t size)
         //struct atom *old_rows = state->dummy_rows;
         if (state->empty_graph)    //This gets set in _cprintf()
         {
-
             state->top_left = new_top;
             state->bot_left = new_bottom;
             state->empty_graph = false;
@@ -393,15 +381,11 @@ _extend_dummy_rows(size_t size)
         state->bot_right = new_bottom;
 
         _extend_dummy_rows(--size);
-
     }
 };
 
-
-void
-dump_graph(void)
+void dump_graph(void)
 {
-
     struct atom *a;
     struct atom *c;
 
@@ -505,7 +489,6 @@ dump_graph(void)
     fflush(NULL);
 }
 
-
 void cprintf_error(char *fmt, ...)
 {
     va_list args;
@@ -521,7 +504,6 @@ void cprintf_error(char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
-
 void cprintf_warning(char *fmt, ...)
 {
     va_list args;
@@ -532,12 +514,9 @@ void cprintf_warning(char *fmt, ...)
     va_end(args);
 }
 
-
-void
-_free_graph(struct atom *a)
+void _free_graph(struct atom *a)
 {
-
-    //TODO: We should still even if something horrible has happened
+    // TODO: We should still even if something horrible has happened
     //      try to free everything based on what does exist.
     if (false == is_initialized || NULL == state)
     {
@@ -616,18 +595,16 @@ _free_graph(struct atom *a)
     return;
 }
 
-void
-free_graph()
+void free_graph()
 {
-    _free_graph(
-        top_left_finder_safe());   //Go to the dummy row. This is kinda convoluted
+    // Go to the dummy row. This is kinda convoluted
+    _free_graph(top_left_finder_safe());
 }
 
 //NOTE: It's probably better to build the first row of true atoms and
 //      Then create the dummy rows. Speed up will be proportional to
 //      the number of Atoms in the first row.
-struct atom *
-_handle_origin_null(struct atom *a, int extend_by)
+struct atom *_handle_origin_null(struct atom *a, int extend_by)
 {
     if (NULL == a)
     {
@@ -648,9 +625,7 @@ _handle_origin_null(struct atom *a, int extend_by)
     return a;
 }
 
-
-struct atom *
-_handle_new_line(struct atom *a)
+struct atom *_handle_new_line(struct atom *a)
 {
     if (NULL == a)
     {
@@ -669,9 +644,8 @@ _handle_new_line(struct atom *a)
     return a;
 }
 
-
-struct atom *
-_link_normal_atom(struct atom *a, struct atom *curr_lower_dummy, int extend_by)
+struct atom *_link_normal_atom(struct atom *a, struct atom *curr_lower_dummy,
+                               int extend_by)
 {
     if (NULL == state || NULL == state->bot_left)
     {
@@ -691,9 +665,7 @@ _link_normal_atom(struct atom *a, struct atom *curr_lower_dummy, int extend_by)
     return a;
 }
 
-
-struct atom *
-create_atom(bool is_newline)
+struct atom *create_atom(bool is_newline)
 {
     const size_t extend_by = 1;
     struct atom *curr_lower_dummy = NULL;
@@ -726,7 +698,7 @@ create_atom(bool is_newline)
     {
         cprintf_error("Error in create_atom: Graph is not initialized.", EXIT_FAILURE);
     }
-    //Origin
+    // Origin
     if (NULL == state->origin)
     {
         a = _handle_origin_null(a, extend_by);
@@ -740,7 +712,6 @@ create_atom(bool is_newline)
     {
         // NOTE: It also MIGHT be more efficient during extension to create a
         //       anticipated dummies.
-
         curr_lower_dummy = state->last_atom_on_last_line->down->right;
         a = _link_normal_atom(a, curr_lower_dummy, extend_by);
     }
@@ -753,20 +724,16 @@ create_atom(bool is_newline)
     return a;
 }
 
-
 // Conversion specifications look like this:
 // %[flags][field_width][.precision][length_modifier]specifier
-ptrdiff_t
-parse_flags(const char *p)
+ptrdiff_t parse_flags(const char *p)
 {
     // Returns the number of bytes starting from the beginning
     // of p that consist only of the characters #0- +'I
     return strspn(p, "#0- +'I");
 }
 
-
-ptrdiff_t
-parse_field_width(const char *p)
+ptrdiff_t parse_field_width(const char *p)
 {
     // Returns the number of bytes in the field width,
     // or zero of no field width specified.
@@ -780,9 +747,7 @@ parse_field_width(const char *p)
     return end - p;
 }
 
-
-ptrdiff_t
-parse_precision(const char *p)
+ptrdiff_t parse_precision(const char *p)
 {
     char *end;
     // Returns the number of bytes representing
@@ -803,17 +768,14 @@ parse_precision(const char *p)
     }
 }
 
-
-ptrdiff_t
-parse_length_modifier(const char *p)
+ptrdiff_t parse_length_modifier(const char *p)
 {
     // length modifiers are:
     // h, hh, l, ll, L, q, j, z, t
     return strspn(p, "hlLqjzt");
 }
 
-ptrdiff_t
-parse_conversion_specifier(const char *p)
+ptrdiff_t parse_conversion_specifier(const char *p)
 {
     // conversion specifiers are:
     // d, i, o, u, x, X, e, E, f, F, g, G, a, A, c, C, s, S, p, n, m
@@ -827,9 +789,7 @@ parse_conversion_specifier(const char *p)
     return d;
 }
 
-
-void
-archive(const char *p, ptrdiff_t span, char **q)
+void archive(const char *p, ptrdiff_t span, char **q)
 {
     // This will call calloc for null strings (strings with
     // a length of 0 consisting only of a terminating null).
@@ -838,9 +798,7 @@ archive(const char *p, ptrdiff_t span, char **q)
     strncpy(*q, p, span);
 }
 
-
-bool
-is(char *p, const char *q)
+bool is(char *p, const char *q)
 {
     // return true if the strings are identical.  Note either p or q
     // may be an empty string on length 0.
@@ -849,9 +807,7 @@ is(char *p, const char *q)
     return lenp == lenq ? (bool) ! strncmp(p, q, lenq) : false;
 }
 
-
-static void
-calc_actual_width(struct atom *a)
+static void calc_actual_width(struct atom *a)
 {
     // Reproduces the big table at
     // https://en.cppreference.com/w/c/io/fprintf
@@ -885,7 +841,10 @@ calc_actual_width(struct atom *a)
         (none)      n               int*
     */
     if (a->is_dummy)
-        return; //Return early if this is a dummy atom. TODO: This isn't great fix it.
+    {
+        // Return early if this is a dummy atom. TODO: This isn't great fix it.
+        return;
+    }
 
     static char buf[4097];
 
@@ -909,7 +868,6 @@ calc_actual_width(struct atom *a)
                           EXIT_FAILURE);
         }
     }
-
     else if (is(a->conversion_specifier, "s"))
     {
         if (is(a->length_modifier, ""))
@@ -1128,10 +1086,8 @@ calc_actual_width(struct atom *a)
     a->original_field_width = strlen(buf);
 }
 
-
-//TODO: Not super happy with the way this is set up. It's a little convoluted.
-void
-calc_max_width()
+// TODO: Not super happy with the way this is set up. It's a little convoluted.
+void calc_max_width()
 {
     // Really can't remember why I put this here but it can't hurt
     if (NULL == state)
@@ -1175,7 +1131,6 @@ calc_max_width()
     }
 }
 
-
 void generate_new_specs()
 {
     char buf[4099];
@@ -1210,9 +1165,7 @@ void generate_new_specs()
     }
 }
 
-
-void
-calculate_writeback(struct atom *a)
+void calculate_writeback(struct atom *a)
 {
     // Calculate writeback handles %n specifiers traversing right to left summing up the field widths
     // and then writing back the total to the pointer
@@ -1244,9 +1197,7 @@ calculate_writeback(struct atom *a)
     }
 }
 
-
-void
-print_something_already()
+void print_something_already()
 {
     // bunch of checks to see if Something horrible happened... No dummies.
     // TODO: make this use find_top_left_safe
@@ -1270,42 +1221,60 @@ print_something_already()
                 }
                 switch (c->type)
                 {
-                    case C_INT_PTR:             calculate_writeback(c);
+                    case C_INT_PTR:
+                        calculate_writeback(c);
                         break;
-                    case C_INT:                 fprintf(state->dest, c->new_specification,
-                                                            c->val.c_int);                break;
-                    case C_WINT_T:              fprintf(state->dest, c->new_specification,
-                                                            c->val.c_wint_t);             break;
-                    case C_CHARX:               fprintf(state->dest, c->new_specification,
-                                                            c->val.c_charx);              break;
-                    case C_WCHAR_TX:            fprintf(state->dest, c->new_specification,
-                                                            c->val.c_wchar_tx);           break;
-                    case C_LONG:                fprintf(state->dest, c->new_specification,
-                                                            c->val.c_long);               break;
-                    case C_LONG_LONG:           fprintf(state->dest, c->new_specification,
-                                                            c->val.c_long_long);          break;
-                    case C_INTMAX_T:            fprintf(state->dest, c->new_specification,
-                                                            c->val.c_intmax_t);           break;
-                    case C_SSIZE_T:             fprintf(state->dest, c->new_specification,
-                                                            c->val.c_ssize_t);            break;
-                    case C_PTRDIFF_T:           fprintf(state->dest, c->new_specification,
-                                                            c->val.c_ptrdiff_t);          break;
-                    case C_UNSIGNED_INT:        fprintf(state->dest, c->new_specification,
-                                                            c->val.c_unsigned_int);       break;
-                    case C_UNSIGNED_LONG:       fprintf(state->dest, c->new_specification,
-                                                            c->val.c_unsigned_long);      break;
-                    case C_UNSIGNED_LONG_LONG:  fprintf(state->dest, c->new_specification,
-                                                            c->val.c_unsigned_long_long); break;
-                    case C_UINTMAX_T:           fprintf(state->dest, c->new_specification,
-                                                            c->val.c_uintmax_t);          break;
-                    case C_SIZE_T:              fprintf(state->dest, c->new_specification,
-                                                            c->val.c_size_t);             break;
-                    case C_DOUBLE:              fprintf(state->dest, c->new_specification,
-                                                            c->val.c_double);             break;
-                    case C_LONG_DOUBLE:         fprintf(state->dest, c->new_specification,
-                                                            c->val.c_long_double);        break;
-                    case C_VOIDX:               fprintf(state->dest, c->new_specification,
-                                                            c->val.c_voidx);              break;
+                    case C_INT:
+                        fprintf(state->dest, c->new_specification, c->val.c_int);
+                        break;
+                    case C_WINT_T:
+                        fprintf(state->dest, c->new_specification, c->val.c_wint_t);
+                        break;
+                    case C_CHARX:
+                        fprintf(state->dest, c->new_specification, c->val.c_charx);
+                        break;
+                    case C_WCHAR_TX:
+                        fprintf(state->dest, c->new_specification, c->val.c_wchar_tx);
+                        break;
+                    case C_LONG:
+                        fprintf(state->dest, c->new_specification, c->val.c_long);
+                        break;
+                    case C_LONG_LONG:
+                        fprintf(state->dest, c->new_specification, c->val.c_long_long);
+                        break;
+                    case C_INTMAX_T:
+                        fprintf(state->dest, c->new_specification, c->val.c_intmax_t);
+                        break;
+                    case C_SSIZE_T:
+                        fprintf(state->dest, c->new_specification, c->val.c_ssize_t);
+                        break;
+                    case C_PTRDIFF_T:
+                        fprintf(state->dest, c->new_specification, c->val.c_ptrdiff_t);
+                        break;
+                    case C_UNSIGNED_INT:
+                        fprintf(state->dest, c->new_specification, c->val.c_unsigned_int);
+                        break;
+                    case C_UNSIGNED_LONG:
+                        fprintf(state->dest, c->new_specification, c->val.c_unsigned_long);
+                        break;
+                    case C_UNSIGNED_LONG_LONG:
+                        fprintf(state->dest, c->new_specification, c->val.c_unsigned_long_long);
+                        break;
+                    case C_UINTMAX_T:
+                        fprintf(state->dest, c->new_specification, c->val.c_uintmax_t);
+                        break;
+                    case C_SIZE_T:
+                        fprintf(state->dest, c->new_specification, c->val.c_size_t);
+                        break;
+                    case C_DOUBLE:
+                        fprintf(state->dest, c->new_specification, c->val.c_double);
+                        break;
+                    case C_LONG_DOUBLE:
+                        fprintf(state->dest, c->new_specification, c->val.c_long_double);
+                        break;
+                    case C_VOIDX:
+                        fprintf(state->dest, c->new_specification, c->val.c_voidx);
+                        break;
                     default:
                         cprintf_warning("Warning in %s: Invalid type.", __PRETTY_FUNCTION__);
                         break;
@@ -1321,9 +1290,7 @@ print_something_already()
     }
 }
 
-
-void
-_cprintf(FILE *stream, const char *fmt, va_list *args)
+void _cprintf(FILE *stream, const char *fmt, va_list *args)
 {
     struct atom *a;
     const char *p = fmt, *q = fmt;
@@ -1432,8 +1399,7 @@ _cprintf(FILE *stream, const char *fmt, va_list *args)
     }
 }
 
-
-//Callback for exit() to free memory
+// Callback for exit() to free memory
 void exit_nice(void)
 {
     if (is_initialized == true)
@@ -1443,9 +1409,7 @@ void exit_nice(void)
     exit(0);
 }
 
-
-void
-cprintf(const char *fmt, ...)
+void cprintf(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -1453,9 +1417,7 @@ cprintf(const char *fmt, ...)
     va_end(args);
 }
 
-
-void
-cfprintf(FILE *stream, const char *fmt, ...)
+void cfprintf(FILE *stream, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -1463,9 +1425,7 @@ cfprintf(FILE *stream, const char *fmt, ...)
     va_end(args);
 }
 
-
-void
-cvprintf(const char *fmt, va_list args)
+void cvprintf(const char *fmt, va_list args)
 {
     va_list args2;
     va_copy(args2, args);
@@ -1473,9 +1433,7 @@ cvprintf(const char *fmt, va_list args)
     va_end(args2);
 }
 
-
-void
-cvfprintf(FILE *stream, const char *fmt, va_list args)
+void cvfprintf(FILE *stream, const char *fmt, va_list args)
 {
     va_list args2;
     va_copy(args2, args);
@@ -1483,9 +1441,7 @@ cvfprintf(FILE *stream, const char *fmt, va_list args)
     va_end(args2);
 }
 
-
-void
-cflush()
+void cflush()
 {
     if (is_initialized != false)
     {
@@ -1499,5 +1455,5 @@ cflush()
         teardown();
     }
 
-    //state = NULL; //Think this is already done but can't hurt.
+    //state = NULL; // Think this is already done but can't hurt.
 }
