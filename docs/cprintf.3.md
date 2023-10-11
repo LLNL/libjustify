@@ -20,4 +20,15 @@ void* cflush();
 DESCRIPTION
 ===========
 
+Libjustify is a simple library that wraps the printf() family of functions and offers a new family: `cprintf()` that emulates their behavior while automatically justifying and formatting output to create a table.
 
+INSTALLING
+===========
+Installation is as simple as:
+
+```
+git clone https://github.com/LLNL/libjustify.git
+mkdir build && cd build
+cmake ../src
+make
+```

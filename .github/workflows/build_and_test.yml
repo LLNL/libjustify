@@ -1,0 +1,25 @@
+name: libjustify CI
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+    branches: [ dev ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v2
+
+    - name: Compile check
+      run: |
+        mkdir build && install
+        cd build
+        cmake -DCMAKE_INSTALL_PREFIX=../install ../src/
+        # build
+        VERBOSE=1 make -j
+        # install
+        make -j install
